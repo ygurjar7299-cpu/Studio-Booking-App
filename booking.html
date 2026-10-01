@@ -1,0 +1,1602 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#f4f5ef">
+	<title>Book a Studio | Websankul</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--ink: #1d2d2c;
+			--muted: #687976;
+			--line: #d7e1de;
+			--paper: #eef5f2;
+			--white: #fff;
+			--green: #176b68;
+			--green-dark: #104c4b;
+			--lime: #ffbd8a;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			min-height: 100vh;
+			margin: 0;
+			padding: 28px 20px;
+			color: var(--ink);
+			background-color: var(--paper);
+			background-image: radial-gradient(circle at 14% 15%, rgb(23 107 104 / 12%), transparent 28%), radial-gradient(circle at 88% 80%, rgb(255 189 138 / 18%), transparent 30%), radial-gradient(#d1ded9 0.7px, transparent 0.7px);
+			background-size: auto, auto, 18px 18px;
+			font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+		}
+
+		.page { width: min(100%, 1120px); margin: 0 auto; }
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 22px;
+			padding: 14px 20px;
+			color: #f8f8ef;
+			background-color: #155b5b;
+			background-image: radial-gradient(rgb(255 255 255 / 8%) 0.7px, transparent 0.7px), linear-gradient(145deg, #123d49 0%, #176b68 58%, #56a292 100%);
+			background-size: 16px 16px, auto;
+			border: 1px solid rgb(21 63 54 / 15%);
+			border-radius: 10px;
+			box-shadow: 0 9px 24px rgb(25 64 49 / 14%);
+		}
+
+		header h1 { margin: 0; color: #fffaf5; font-size: 20px; font-weight: 700; }
+		.header-actions { display: flex; align-items: center; gap: 10px; }
+
+		button, .header-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 40px;
+			padding: 0 15px;
+			color: #fff;
+			background: var(--green);
+			border: 0;
+			border-radius: 7px;
+			cursor: pointer;
+			font: inherit;
+			font-size: 13px;
+			font-weight: 700;
+			text-decoration: none;
+		}
+
+		button:hover, .header-button:hover { background: var(--green-dark); }
+		header .header-button, header #sign-out-button {
+			color: #f8f8ef;
+			background: rgb(255 255 255 / 10%);
+			border: 1px solid rgb(255 255 255 / 32%);
+		}
+		header .header-button:hover, header #sign-out-button:hover { background: rgb(255 255 255 / 20%); }
+		button:disabled { cursor: wait; opacity: 0.65; }
+		button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgb(23 107 104 / 30%); outline-offset: 2px; }
+
+		.booking-card {
+			padding: 22px;
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			box-shadow: 0 5px 16px rgb(32 57 49 / 9%);
+		}
+
+		.booking-card h2 { margin: 0 0 22px; color: var(--green); font-size: 19px; }
+		.booking-form { display: grid; gap: 14px; }
+		.booking-form label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+		.booking-form input, .booking-form select, .name-picker-button {
+			width: 100%;
+			min-height: 40px;
+			padding: 8px 10px;
+			color: var(--ink);
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			font: inherit;
+			font-size: 14px;
+		}
+
+		.name-picker { position: relative; display: grid; gap: 6px; }
+		.name-picker > label { color: var(--muted); font-size: 12px; }
+		.name-picker-button { justify-content: space-between; text-align: left; font-weight: 400; }
+		.name-picker-button[aria-expanded="true"] { border-color: var(--green); }
+		.name-picker-button .placeholder { color: #899591; }
+		.name-picker-panel {
+			position: absolute;
+			z-index: 5;
+			top: calc(100% + 3px);
+			right: 0;
+			left: 0;
+			max-height: 300px;
+			padding: 9px;
+			overflow: hidden;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 7px;
+			box-shadow: 0 12px 28px rgb(29 45 44 / 16%);
+		}
+		.name-picker-panel[hidden] { display: none; }
+		.name-search { margin-bottom: 7px; }
+		.name-options { max-height: 220px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+		.name-option-row { display: flex; align-items: center; gap: 5px; }
+		.name-option {
+			display: block;
+			width: 100%;
+			min-height: 36px;
+			padding: 8px 9px;
+			color: var(--ink);
+			background: #fff;
+			border: 0;
+			border-radius: 5px;
+			text-align: left;
+			font: inherit;
+			font-size: 13px;
+		}
+		.name-option:hover, .name-option[aria-selected="true"] { background: var(--paper); color: var(--green-dark); }
+		.name-option-row .name-option { flex: 1; }
+		.name-delete-button {
+			min-height: 32px;
+			padding: 0 9px;
+			color: #b42318;
+			background: #fff4f2;
+			border: 1px solid #f2d0ca;
+			border-radius: 5px;
+			font-size: 11px;
+		}
+		.name-delete-button:hover { background: #ffe7e2; }
+		.no-name-results { padding: 10px 9px; color: var(--muted); font-size: 12px; }
+		.name-admin-tools { display: grid; gap: 8px; padding: 10px 0 2px; border-top: 1px solid var(--line); }
+		.name-admin-tools[hidden] { display: none; }
+		.name-admin-tools label { color: var(--muted); font-size: 11px; }
+		.name-add-row { display: flex; gap: 7px; }
+		.name-add-row input { min-width: 0; min-height: 36px; padding: 7px 9px; font-size: 12px; }
+		.name-add-row button { min-height: 36px; padding: 0 12px; white-space: nowrap; }
+		.name-admin-status { min-height: 14px; margin: 0; color: var(--muted); font-size: 11px; }
+		.name-admin-status.error { color: #b42318; }
+
+		.youtube-channel-picker { display: grid; gap: 6px; }
+		.youtube-channel-picker[hidden] { display: none; }
+		.youtube-channel-picker > label { color: var(--muted); font-size: 12px; }
+		.youtube-channel-menu { position: relative; }
+		.youtube-channel-button {
+			display: flex;
+			width: 100%;
+			align-items: center;
+			justify-content: space-between;
+			text-align: left;
+			font-weight: 400;
+		}
+		.youtube-channel-button[aria-expanded="true"] { border-color: var(--green); }
+		.youtube-channel-button .placeholder { color: #899591; }
+		.youtube-channel-options {
+			position: absolute;
+			z-index: 5;
+			top: calc(100% + 3px);
+			right: 0;
+			left: 0;
+			max-height: 260px;
+			margin: 0;
+			padding: 6px;
+			overflow-y: auto;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 7px;
+			box-shadow: 0 12px 28px rgb(29 45 44 / 16%);
+			list-style: none;
+		}
+		.youtube-channel-options[hidden] { display: none; }
+		.youtube-channel-admin-option { margin-top: 5px; padding: 8px 4px 4px; border-top: 1px solid var(--line); }
+		.youtube-channel-options label {
+			display: flex;
+			align-items: center;
+			gap: 9px;
+			padding: 8px;
+			color: var(--ink);
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 13px;
+		}
+		.youtube-channel-options label:hover { background: var(--paper); }
+		.youtube-channel-options input[type="checkbox"] { flex: 0 0 16px; width: 16px; height: 16px; min-height: 16px; margin: 0; accent-color: var(--green); }
+		.youtube-channel-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+		.youtube-channel-options .youtube-channel-option label { flex: 1; min-width: 0; }
+		.youtube-channel-delete {
+			min-height: 28px;
+			padding: 3px 8px;
+			color: #a1261d;
+			background: #fff;
+			border: 1px solid #f0c6c2;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 11px;
+		}
+		.youtube-channel-admin-tools { display: grid; gap: 5px; }
+		.youtube-channel-admin-tools[hidden] { display: none; }
+		.youtube-channel-admin-tools > label { color: var(--muted); font-size: 11px; }
+		.youtube-channel-add-row { display: flex; width: 100%; min-width: 0; gap: 7px; }
+		.youtube-channel-admin-tools .youtube-channel-add-row input[type="text"] {
+			flex: 1 1 auto;
+			width: 100%;
+			min-width: 0;
+			min-height: 40px;
+			padding: 8px 10px;
+			color: var(--ink);
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			font: inherit;
+			font-size: 13px;
+			box-sizing: border-box;
+		}
+		.youtube-channel-admin-tools .youtube-channel-add-row input[type="text"]::placeholder { color: #697772; opacity: 1; }
+		.youtube-channel-add-row button { flex: 0 0 auto; min-height: 40px; padding: 0 12px; white-space: nowrap; }
+		.youtube-channel-admin-status { min-height: 14px; margin: 0; color: var(--muted); font-size: 11px; }
+		.youtube-channel-admin-status.error { color: #b42318; }
+
+		.batch-picker { display: grid; gap: 6px; }
+		.batch-picker[hidden] { display: none; }
+		.batch-picker > label { color: var(--muted); font-size: 12px; }
+		.batch-picker-menu { position: relative; }
+		.batch-picker-button {
+			display: flex;
+			width: 100%;
+			align-items: center;
+			justify-content: space-between;
+			text-align: left;
+			font-weight: 400;
+		}
+		.batch-picker-button[aria-expanded="true"] { border-color: var(--green); }
+		.batch-picker-button .placeholder { color: #899591; }
+		.batch-picker-options {
+			position: absolute;
+			z-index: 5;
+			top: calc(100% + 3px);
+			right: 0;
+			left: 0;
+			max-height: 300px;
+			padding: 8px;
+			overflow-y: auto;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 7px;
+			box-shadow: 0 12px 28px rgb(29 45 44 / 16%);
+		}
+		.batch-picker-options[hidden] { display: none; }
+		.batch-search { margin-bottom: 6px; }
+		.batch-options-list { display: grid; gap: 3px; max-height: 210px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+		.batch-option-row { display: flex; align-items: center; gap: 6px; }
+		.batch-option-check { flex: 0 0 16px; width: 16px; height: 16px; min-height: 16px; margin: 0 0 0 8px; accent-color: var(--green); }
+		.batch-option {
+			flex: 1;
+			min-width: 0;
+			min-height: 36px;
+			padding: 8px;
+			color: var(--ink);
+			background: #fff;
+			border: 0;
+			text-align: left;
+			font-size: 13px;
+			font-weight: 400;
+			line-height: 1.45;
+			white-space: normal;
+		}
+		.batch-option:hover, .batch-option[aria-selected="true"] { color: var(--ink); background: var(--paper); }
+		.batch-delete {
+			min-height: 28px;
+			padding: 3px 8px;
+			color: #a1261d;
+			background: #fff;
+			border: 1px solid #f0c6c2;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 11px;
+		}
+		.batch-admin-tools { display: grid; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+		.batch-admin-tools[hidden] { display: none; }
+		.batch-admin-tools > label { color: var(--muted); font-size: 11px; }
+		.batch-add-row { display: flex; width: 100%; min-width: 0; gap: 7px; }
+		.batch-admin-tools .batch-add-row input[type="text"] {
+			flex: 1 1 auto;
+			width: 100%;
+			min-width: 0;
+			min-height: 40px;
+			padding: 8px 10px;
+			color: var(--ink);
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			font: inherit;
+			font-size: 13px;
+			box-sizing: border-box;
+		}
+		.batch-admin-tools .batch-add-row input[type="text"]::placeholder { color: #697772; opacity: 1; }
+		.batch-add-row button { flex: 0 0 auto; min-height: 40px; padding: 0 12px; white-space: nowrap; }
+		.batch-admin-status { min-height: 14px; margin: 0; color: var(--muted); font-size: 11px; }
+		.batch-admin-status.error { color: #b42318; }
+
+		.booking-times {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 14px;
+		}
+
+		.submit-button { width: 100%; min-height: 42px; margin-top: 2px; }
+		.form-message { min-height: 18px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+		.form-message.error { color: #b42318; }
+		.form-message.success { color: var(--green-dark); font-weight: 700; }
+		#sign-out-button:disabled { cursor: wait; }
+
+		@media (max-width: 640px) {
+			body { padding: 14px 10px; }
+			header { flex-wrap: wrap; padding: 13px; }
+			.header-actions { width: 100%; }
+			.header-button, #sign-out-button { flex: 1; }
+			.booking-card { padding: 17px; }
+			.booking-times { grid-template-columns: 1fr; gap: 14px; }
+		}
+	</style>
+</head>
+<body>
+	<div class="page">
+		<header>
+			<h1>Studio Booking</h1>
+			<nav class="header-actions" aria-label="Page navigation">
+				<a class="header-button" href="dashboard.html">Dashboard</a>
+				<button id="sign-out-button" type="button">Logout</button>
+			</nav>
+		</header>
+
+		<main>
+			<section class="booking-card" aria-labelledby="booking-title">
+				<h2 id="booking-title">Book a Studio</h2>
+				<form class="booking-form" id="booking-form">
+					<div class="name-picker" id="name-picker">
+						<label for="name-picker-button">Name</label>
+						<input id="booking-name" name="name" type="hidden">
+						<button class="name-picker-button" id="name-picker-button" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="name-options">
+							<span id="selected-name" class="placeholder">Select a name</span>
+							<span aria-hidden="true">▾</span>
+						</button>
+						<div class="name-picker-panel" id="name-picker-panel" hidden>
+							<input class="name-search" id="name-search" type="search" placeholder="Search names…" autocomplete="off" aria-label="Search names" aria-controls="name-options">
+							<ul class="name-options" id="name-options" role="listbox" aria-label="Available names"></ul>
+							<div class="name-admin-tools" id="name-admin-tools" hidden>
+								<label for="new-name">Admin: Add a name</label>
+								<div class="name-add-row">
+									<input id="new-name" type="text" maxlength="100" placeholder="Enter new name">
+									<button id="add-name-button" type="button">Add</button>
+								</div>
+								<p class="name-admin-status" id="name-admin-status" role="status"></p>
+							</div>
+						</div>
+					</div>
+					<div class="booking-times">
+						<label for="booking-date">Date
+							<select id="booking-date" name="date" required></select>
+						</label>
+						<label for="start-time">Start Time
+							<select id="start-time" name="startTime" required>
+								<option value="">Select Start Time</option>
+							</select>
+						</label>
+						<label for="end-time">End Time
+							<select id="end-time" name="endTime" required>
+								<option value="">Select End Time</option>
+							</select>
+						</label>
+					</div>
+					<label for="booking-purpose">Recording Purpose
+						<select id="booking-purpose" name="purpose" required>
+							<option value="">Select Purpose</option>
+							<option value="YouTube Live">YouTube Live</option>
+							<option value="YouTube Recording">YouTube Recording</option>
+							<option value="Planner">Planner</option>
+							<option value="Smart Course">Smart Course</option>
+							<option value="Application Live">Application Live</option>
+						</select>
+					</label>
+					<div class="youtube-channel-picker" id="youtube-channel-picker" hidden>
+						<label for="youtube-channel-button">YouTube Channel(s)</label>
+						<div class="youtube-channel-menu">
+							<button class="youtube-channel-button" id="youtube-channel-button" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="youtube-channel-options">
+								<span id="youtube-channel-summary" class="placeholder">Select one or more channels</span>
+								<span aria-hidden="true">▾</span>
+							</button>
+							<ul class="youtube-channel-options" id="youtube-channel-options" hidden>
+								<li class="youtube-channel-admin-option">
+									<div class="youtube-channel-admin-tools" id="youtube-channel-admin-tools" hidden>
+										<label for="new-youtube-channel">Admin: Add a channel</label>
+										<div class="youtube-channel-add-row">
+											<input id="new-youtube-channel" type="text" maxlength="100" placeholder="Enter channel name">
+											<button id="add-youtube-channel-button" type="button">Add</button>
+										</div>
+										<p class="youtube-channel-admin-status" id="youtube-channel-admin-status" role="status"></p>
+									</div>
+								</li>
+							</ul>
+						</div>
+					</div>
+					<div class="batch-picker" id="batch-picker" hidden>
+						<label for="batch-picker-button">Batch Name</label>
+						<div class="batch-picker-menu">
+							<button class="batch-picker-button" id="batch-picker-button" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="batch-picker-options">
+								<span id="batch-picker-summary" class="placeholder">Select a batch</span>
+								<span aria-hidden="true">▾</span>
+							</button>
+							<div class="batch-picker-options" id="batch-picker-options" hidden>
+								<input class="batch-search" id="batch-search" type="search" placeholder="Search batches..." autocomplete="off" aria-label="Search batches">
+								<ul class="batch-options-list" id="batch-options-list" role="listbox" aria-label="Available batches"></ul>
+								<div class="batch-admin-tools" id="batch-admin-tools" hidden>
+									<label for="new-batch-name">Admin: Add a batch</label>
+									<div class="batch-add-row">
+										<input id="new-batch-name" type="text" maxlength="160" placeholder="Enter batch name">
+										<button id="add-batch-button" type="button">Add</button>
+									</div>
+									<p class="batch-admin-status" id="batch-admin-status" role="status"></p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<label for="booking-subject">Subject Name
+						<input id="booking-subject" name="subject" maxlength="120" required>
+					</label>
+					<p class="form-message" id="booking-message" role="status"></p>
+					<button class="submit-button" id="confirm-booking" type="submit">Confirm Booking</button>
+				</form>
+			</section>
+		</main>
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+		import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+		import { get, getDatabase, onValue, push, ref, runTransaction, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyA2sDPaG8p8yXYXDDoF8U6cQDIZ5D5cfnk",
+			authDomain: "studiobookingapp-114a7.firebaseapp.com",
+			databaseURL: "https://studiobookingapp-114a7-default-rtdb.firebaseio.com",
+			projectId: "studiobookingapp-114a7",
+			storageBucket: "studiobookingapp-114a7.firebasestorage.app",
+			messagingSenderId: "356544436239",
+			appId: "1:356544436239:web:d4707344bacbb11afe6b7a",
+			measurementId: "G-ESREKNYNLV"
+		};
+
+		const initialStudios = [
+			{ key: "studio1", name: "Studio 1" },
+			{ key: "studio2", name: "Studio 2" },
+			{ key: "studio3", name: "Studio 3" },
+			{ key: "studio4", name: "Studio 4" },
+			{ key: "sargasanStudio1", name: "Sargasan Studio 1" },
+			{ key: "sargasanStudio2", name: "Sargasan Studio 2" },
+			{ key: "sharanam1", name: "Sharanam 1" },
+			{ key: "sharanam2", name: "Sharanam 2" },
+			{ key: "sharanam3", name: "Sharanam 3" }
+		];
+		let studios = new Map(initialStudios.map((studio) => [studio.key, studio.name]));
+		const params = new URLSearchParams(window.location.search);
+		const studioKey = params.get("studio");
+		let studioName = studioKey ? studios.get(studioKey) : undefined;
+		const selectedDate = params.get("date");
+		const app = initializeApp(firebaseConfig);
+		const auth = getAuth(app);
+		const database = getDatabase(app);
+		const studioListRef = ref(database, "studioList");
+		const SHEETS_SYNC_URL = "https://script.google.com/macros/s/AKfycbxMA_HBB-ZWDdVl7SB1kQi0g48uW1F-wN3BCreQhqPG7L4seTWfErqEh4CRlE3si9H5ig/exec";
+		const form = document.querySelector("#booking-form");
+		const message = document.querySelector("#booking-message");
+		const confirmButton = document.querySelector("#confirm-booking");
+		const purposeSelect = document.querySelector("#booking-purpose");
+		const batchPicker = document.querySelector("#batch-picker");
+		const batchPickerButton = document.querySelector("#batch-picker-button");
+		const batchPickerSummary = document.querySelector("#batch-picker-summary");
+		const batchPickerOptions = document.querySelector("#batch-picker-options");
+		const batchSearch = document.querySelector("#batch-search");
+		const batchOptionsList = document.querySelector("#batch-options-list");
+		const batchAdminTools = document.querySelector("#batch-admin-tools");
+		const newBatchNameInput = document.querySelector("#new-batch-name");
+		const batchAdminStatus = document.querySelector("#batch-admin-status");
+		const youtubeChannelPicker = document.querySelector("#youtube-channel-picker");
+		const youtubeChannelButton = document.querySelector("#youtube-channel-button");
+		const youtubeChannelSummary = document.querySelector("#youtube-channel-summary");
+		const youtubeChannelOptions = document.querySelector("#youtube-channel-options");
+		const youtubeChannelAdminOption = document.querySelector(".youtube-channel-admin-option");
+		const youtubeChannelAdminTools = document.querySelector("#youtube-channel-admin-tools");
+		const newYoutubeChannelInput = document.querySelector("#new-youtube-channel");
+		const youtubeChannelAdminStatus = document.querySelector("#youtube-channel-admin-status");
+		const namePicker = document.querySelector("#name-picker");
+		const namePickerButton = document.querySelector("#name-picker-button");
+		const namePickerPanel = document.querySelector("#name-picker-panel");
+		const nameSearch = document.querySelector("#name-search");
+		const nameOptions = document.querySelector("#name-options");
+		const selectedName = document.querySelector("#selected-name");
+		const nameInput = document.querySelector("#booking-name");
+		const adminTools = document.querySelector("#name-admin-tools");
+		const nameAdminStatus = document.querySelector("#name-admin-status");
+		const newNameInput = document.querySelector("#new-name");
+		const namesRef = ref(database, "bookingNames");
+		const initialYoutubeChannels = [
+			"WebSankul Official",
+			"SSC",
+			"Banking",
+			"Railway By WebSankul",
+			"TET TAT By WebSankul",
+			"WebSankul GPSC",
+			"Triangle Civil Services Institute",
+			"MPHW",
+			"FHW",
+			"Mukhya Sevika by WebSankul",
+			"Accountancy WebSankul",
+			"WebSankul Police & Forest",
+			"TDY WebSankul"
+		];
+		const youtubeChannelsRef = ref(database, "youtubeChannels");
+		let youtubeChannels = [...initialYoutubeChannels];
+		const initialApplicationLiveBatches = [
+			"CCE Group A & B MAINS Live Batch - સુલેખન",
+			"Vanpal & Vanrakshak 2.O Live Batch - વનસારથિ"
+		];
+		const applicationLiveBatchesRef = ref(database, "applicationLiveBatches");
+		let applicationLiveBatches = [...initialApplicationLiveBatches];
+		const selectedBatchNames = new Set();
+		const initialNames = [
+			"RAVI PATEL",
+			"KULDEEPSINH JADEJA",
+			"JENISH DUMASIYA",
+			"DHIREN KHATANA",
+			"PARTH DODIYA",
+			"SATISH KOTAR",
+			"BRIJRAJ GOHIL",
+			"JAL SAGAR",
+			"BHAKTI PATEL",
+			"ATIRATH BHATT",
+			"DARSHIT GOSWAMI",
+			"MANISH SINDHI",
+			"HEMANT HIWARALE",
+			"MITESH RAJPUT",
+			"AKARAM SHERASIYA",
+			"BHARAT NAKUM",
+			"TARUN KATARIYA",
+			"JAY DOBARIYA",
+			"PRASHANT CHAUHAN",
+			"VISHAL SOLANKI",
+			"KAMLESH TOTLANI",
+			"ASHUTOSH RANA",
+			"ABHIJEET ZALA",
+			"NISHANT SHAH",
+			"KANJI KUCHHADIYA",
+			"AJAY KHUNTI",
+			"VIKAS PATEL",
+			"LAKHAN BHATIYA",
+			"ANIL RAKHIYANIYA",
+			"KRUNAL BOCHIYA",
+			"DURGESH CHUAHAN",
+			"PANKAJ RATHOD",
+			"JIGAR PATEL",
+			"BHAVIK RAO",
+			"PRIYA PARMAR",
+			"ROMIL KAVA",
+			"KULDIP PATEL",
+			"SARVAN VAGHELA",
+			"HARDIK CHAVDA",
+			"RUTVIK PATEL",
+			"SANDIP BALWANI",
+			"AKASH JOSHI",
+			"KRUNAL PRAJAPATI",
+			"VICKY BAMANIYA",
+			"JAINIK KHADASALIYA",
+			"KISHAN THUMAR",
+			"NAITIK GADHVI",
+			"KISHAN RADADIYA",
+			"VIJAY NAKIA",
+			"DILIP VARMORA",
+			"ANKIT SORATHIYA",
+			"NANDINI BHATT",
+			"MAULIK PANCHAL",
+			"KARAN VEGHAD",
+			"AMIT BHANUSHALI",
+			"KESHARI SHIH",
+			"VAISHALI VAGHELA",
+			"HARSHIL THAKKAR",
+			"DEMO LECTURE",
+			"WORKING"
+		];
+		let names = [...initialNames];
+		let currentUser = null;
+		let currentRole = null;
+		let unsyncedBooking = null;
+		let navigatingAfterBooking = false;
+		const selectedYoutubeChannels = new Set();
+		if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+			document.querySelector(".header-button").href = `dashboard.html?date=${encodeURIComponent(selectedDate)}`;
+		}
+
+		function formatLocalDate(date) {
+			const year = date.getFullYear();
+			const month = String(date.getMonth() + 1).padStart(2, "0");
+			const day = String(date.getDate()).padStart(2, "0");
+			return `${year}-${month}-${day}`;
+		}
+
+		function formatDateOption(date) {
+			const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
+			const day = String(date.getDate()).padStart(2, "0");
+			const month = String(date.getMonth() + 1).padStart(2, "0");
+			return `${weekday}, ${day}/${month}/${date.getFullYear()}`;
+		}
+
+		function populateDateOptions(preferredDate = selectedDate) {
+			const dateSelect = document.querySelector("#booking-date");
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			const validDates = [];
+			dateSelect.replaceChildren();
+
+			for (let offset = 0; offset < 8; offset += 1) {
+				const date = new Date(today);
+				date.setDate(today.getDate() + offset);
+				const dateValue = formatLocalDate(date);
+				validDates.push(dateValue);
+				const option = document.createElement("option");
+				option.value = dateValue;
+				option.textContent = formatDateOption(date);
+				dateSelect.append(option);
+			}
+
+			dateSelect.value = validDates.includes(preferredDate) ? preferredDate : validDates[0];
+		}
+
+		function scheduleDateRefresh() {
+			const now = new Date();
+			const nextMidnight = new Date(now);
+			nextMidnight.setHours(24, 0, 0, 25);
+			window.setTimeout(() => {
+				const selectedDate = document.querySelector("#booking-date").value;
+				populateDateOptions(selectedDate);
+				scheduleDateRefresh();
+			}, nextMidnight.getTime() - now.getTime());
+		}
+
+		function setMessage(text, kind = "") {
+			message.textContent = text;
+			message.classList.toggle("error", kind === "error");
+			message.classList.toggle("success", kind === "success");
+		}
+
+		async function syncBookingWithSheet(booking) {
+			if (!SHEETS_SYNC_URL) throw new Error("Google Sheet sync is not connected yet. Ask the Admin to deploy and connect the Apps Script.");
+			if (!currentUser) throw new Error("Sign in before syncing bookings.");
+			const idToken = await currentUser.getIdToken();
+			const requestId = crypto.randomUUID();
+			const frame = document.createElement("iframe");
+			const syncForm = document.createElement("form");
+			frame.name = `sheet-sync-${requestId}`;
+			frame.title = "Google Sheet sync";
+			frame.hidden = true;
+			syncForm.method = "post";
+			syncForm.action = SHEETS_SYNC_URL;
+			syncForm.target = frame.name;
+			syncForm.hidden = true;
+			for (const [name, value] of Object.entries({
+				idToken,
+				requestId,
+				payload: JSON.stringify({ operation: "upsert", booking })
+			})) {
+				const input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value;
+				syncForm.append(input);
+			}
+			document.body.append(frame, syncForm);
+
+			return new Promise((resolve, reject) => {
+				const cleanup = () => {
+					window.removeEventListener("message", onMessage);
+					window.clearTimeout(timeout);
+					syncForm.remove();
+					frame.remove();
+				};
+				const onMessage = (event) => {
+					if (event.source !== frame.contentWindow || event.data?.requestId !== requestId) return;
+					cleanup();
+					if (event.data.success) resolve();
+					else reject(new Error(event.data.message || "Google Sheet sync failed."));
+				};
+				const timeout = window.setTimeout(() => {
+					cleanup();
+					reject(new Error("Google Sheet did not respond. Check the Apps Script deployment URL and access settings."));
+				}, 20000);
+				window.addEventListener("message", onMessage);
+				syncForm.submit();
+			});
+		}
+
+		async function sendBookingToSheet(booking) {
+			if (!SHEETS_SYNC_URL) throw new Error("Google Sheet sync is not connected yet.");
+			if (!currentUser) throw new Error("Sign in before syncing bookings.");
+			const idToken = await currentUser.getIdToken();
+			const body = new URLSearchParams({
+				idToken,
+				requestId: crypto.randomUUID(),
+				payload: JSON.stringify({ operation: "upsert", booking })
+			});
+			if (navigator.sendBeacon(SHEETS_SYNC_URL, body)) return;
+
+			const frame = document.createElement("iframe");
+			const syncForm = document.createElement("form");
+			frame.name = `sheet-sync-${crypto.randomUUID()}`;
+			frame.title = "Google Sheet sync";
+			frame.hidden = true;
+			syncForm.method = "post";
+			syncForm.action = SHEETS_SYNC_URL;
+			syncForm.target = frame.name;
+			syncForm.hidden = true;
+			for (const [name, value] of body.entries()) {
+				const input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value;
+				syncForm.append(input);
+			}
+			document.body.append(frame, syncForm);
+			syncForm.submit();
+		}
+
+		function bookingTimeMinutes(value) {
+			const match = /^(\d{2}):(\d{2})$/.exec(String(value || ""));
+			return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
+		}
+
+		function bookingSlotKeys(startTime, endTime) {
+			const start = bookingTimeMinutes(startTime);
+			const end = bookingTimeMinutes(endTime);
+			if (!Number.isFinite(start) || !Number.isFinite(end) || start % 30 !== 0 || end % 30 !== 0 || end <= start) {
+				throw new Error("Choose a valid time range in 30-minute increments.");
+			}
+			const keys = [];
+			for (let minute = start; minute < end; minute += 30) {
+				keys.push(`${String(Math.floor(minute / 60)).padStart(2, "0")}-${String(minute % 60).padStart(2, "0")}`);
+			}
+			return keys;
+		}
+
+		async function reserveBookingSlots(booking, bookingId, excludedBookingId = "") {
+			const bookingsSnapshot = await get(ref(database, `bookings/${studioKey}`));
+			const requestedStart = bookingTimeMinutes(booking.startTime);
+			const requestedEnd = bookingTimeMinutes(booking.endTime);
+			if (bookingsSnapshot.exists()) {
+				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
+					if (!existing || key === excludedBookingId || existing.date !== booking.date) return false;
+					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
+					const existingEnd = bookingTimeMinutes(existing.endTime);
+					return Number.isFinite(existingStart) && Number.isFinite(existingEnd)
+						&& requestedStart < existingEnd && existingStart < requestedEnd;
+				});
+				if (conflict) throw new Error("This studio already has a booking during that time. Choose another time.");
+			}
+
+			const reservedKeys = [];
+			try {
+				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
+					const previous = await get(slotRef);
+					const alreadyOwned = previous.child("bookingId").val() === bookingId;
+					if (previous.exists() && !alreadyOwned) {
+						const staleOwnerId = String(previous.child("bookingId").val() || "");
+						const staleOwnerKey = staleOwnerId.startsWith(`${studioKey}/`)
+							? staleOwnerId.slice(studioKey.length + 1)
+							: "";
+						const reservedAt = Number(previous.child("reservedAt").val());
+						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+						const ownerExists = staleOwnerKey
+							? (await get(ref(database, `bookings/${studioKey}/${staleOwnerKey}`))).exists()
+							: true;
+						if (!ownerExists || reservationExpired) {
+							await runTransaction(slotRef, (current) =>
+								current?.bookingId === staleOwnerId ? null : undefined
+							);
+						}
+					}
+					const result = await runTransaction(slotRef, (current) => {
+						if (current === null) return { bookingId, userId: booking.userId, reservedAt: Date.now() };
+						if (current.bookingId === bookingId) return current;
+						return;
+					});
+					if (!result.committed) throw new Error("This studio time slot was just booked by someone else. Choose another time.");
+					if (!alreadyOwned) reservedKeys.push(slotKey);
+				}
+				return reservedKeys;
+			} catch (error) {
+				await releaseBookingSlots(booking.date, reservedKeys, bookingId);
+				throw error;
+			}
+		}
+
+		async function releaseBookingSlots(date, slotKeys, bookingId) {
+			for (const slotKey of slotKeys) {
+				const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === bookingId ? null : undefined
+				);
+			}
+		}
+
+		function applyManagedStudios(nextStudios) {
+			studios = new Map(nextStudios.map((studio) => [studio.key, studio.name]));
+			studioName = studioKey ? studios.get(studioKey) : undefined;
+			if (studioName) {
+				document.querySelector("#booking-title").textContent = `Book ${studioName}`;
+				confirmButton.disabled = false;
+			} else {
+				setMessage("The selected studio is no longer available. Return to the dashboard and choose another studio.", "error");
+				confirmButton.disabled = true;
+			}
+		}
+
+		function populateTimes() {
+			const startSelect = document.querySelector("#start-time");
+			const endSelect = document.querySelector("#end-time");
+			for (let minutes = 8 * 60; minutes <= 22 * 60 + 30; minutes += 30) {
+				appendTimeOption(startSelect, minutes);
+			}
+			for (let minutes = 8 * 60; minutes <= 23 * 60; minutes += 30) {
+				appendTimeOption(endSelect, minutes);
+			}
+		}
+
+		function appendTimeOption(select, minutes) {
+			const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+			const remainder = String(minutes % 60).padStart(2, "0");
+			const value = `${hours}:${remainder}`;
+			const option = document.createElement("option");
+			option.value = value;
+			option.textContent = new Date(2000, 0, 1, Number(hours), Number(remainder))
+				.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+			select.append(option);
+		}
+
+		function renderNameOptions(searchText = "") {
+			const normalizedSearch = searchText.trim().toLocaleLowerCase();
+			const filteredNames = names.filter((name) => name.toLocaleLowerCase().includes(normalizedSearch));
+			nameOptions.replaceChildren();
+			if (filteredNames.length === 0) {
+				const emptyMessage = document.createElement("li");
+				emptyMessage.className = "no-name-results";
+				emptyMessage.textContent = "No matching names.";
+				emptyMessage.setAttribute("role", "option");
+				emptyMessage.setAttribute("aria-disabled", "true");
+				nameOptions.append(emptyMessage);
+				return;
+			}
+
+			for (const name of filteredNames) {
+				const item = document.createElement("li");
+				item.setAttribute("role", "presentation");
+				const row = document.createElement("div");
+				row.className = "name-option-row";
+				const option = document.createElement("button");
+				option.className = "name-option";
+				option.type = "button";
+				option.setAttribute("role", "option");
+				option.setAttribute("aria-selected", String(nameInput.value === name));
+				option.textContent = name;
+				option.addEventListener("click", () => {
+					nameInput.value = name;
+					selectedName.textContent = name;
+					selectedName.classList.remove("placeholder");
+					namePickerButton.setAttribute("aria-expanded", "false");
+					namePickerPanel.hidden = true;
+					nameSearch.value = "";
+					namePickerButton.focus();
+				});
+				row.append(option);
+				if (currentRole === "Admin") {
+					const deleteButton = document.createElement("button");
+					deleteButton.className = "name-delete-button";
+					deleteButton.type = "button";
+					deleteButton.textContent = "Delete";
+					deleteButton.setAttribute("aria-label", `Delete ${name}`);
+					deleteButton.addEventListener("click", async () => {
+						await updateManagedName(name, "delete");
+					});
+					row.append(deleteButton);
+				}
+				item.append(row);
+				nameOptions.append(item);
+			}
+		}
+
+		function updateYoutubeChannelSummary() {
+			const selected = youtubeChannels.filter((channel) => selectedYoutubeChannels.has(channel));
+			if (selected.length === 0) {
+				youtubeChannelSummary.textContent = "Select one or more channels";
+				youtubeChannelSummary.classList.add("placeholder");
+				return;
+			}
+			youtubeChannelSummary.textContent = `${selected.length} channel${selected.length === 1 ? "" : "s"} selected`;
+			youtubeChannelSummary.classList.remove("placeholder");
+		}
+
+		function renderYoutubeChannelOptions() {
+			youtubeChannelOptions.replaceChildren();
+			for (const channel of youtubeChannels) {
+				const item = document.createElement("li");
+				item.className = "youtube-channel-option";
+				const label = document.createElement("label");
+				const checkbox = document.createElement("input");
+				checkbox.type = "checkbox";
+				checkbox.value = channel;
+				checkbox.checked = selectedYoutubeChannels.has(channel);
+				checkbox.setAttribute("aria-label", channel);
+				checkbox.addEventListener("change", () => {
+					if (checkbox.checked) selectedYoutubeChannels.add(channel);
+					else selectedYoutubeChannels.delete(channel);
+					updateYoutubeChannelSummary();
+				});
+				label.append(checkbox, document.createTextNode(channel));
+				item.append(label);
+				if (currentRole === "Admin") {
+					const deleteButton = document.createElement("button");
+					deleteButton.className = "youtube-channel-delete";
+					deleteButton.type = "button";
+					deleteButton.textContent = "Delete";
+					deleteButton.setAttribute("aria-label", `Delete ${channel}`);
+					deleteButton.addEventListener("click", async () => {
+						await updateManagedYoutubeChannel(channel, "delete");
+					});
+					item.append(deleteButton);
+				}
+				youtubeChannelOptions.append(item);
+			}
+			youtubeChannelOptions.append(youtubeChannelAdminOption);
+		}
+
+		function updateYoutubeChannelVisibility() {
+			const showChannels = currentRole === "Admin" && purposeSelect.value === "YouTube Live";
+			youtubeChannelPicker.hidden = !showChannels;
+			if (!showChannels) {
+				youtubeChannelOptions.hidden = true;
+				youtubeChannelButton.setAttribute("aria-expanded", "false");
+				selectedYoutubeChannels.clear();
+			}
+			renderYoutubeChannelOptions();
+			updateYoutubeChannelSummary();
+		}
+
+		function updateBatchPickerVisibility() {
+			const showBatchPicker = purposeSelect.value === "Application Live";
+			batchPicker.hidden = !showBatchPicker;
+			if (!showBatchPicker) {
+				batchPickerOptions.hidden = true;
+				batchPickerButton.setAttribute("aria-expanded", "false");
+			}
+		}
+
+		function updateBatchPickerSummary() {
+			const selected = applicationLiveBatches.filter((batch) => selectedBatchNames.has(batch));
+			batchPickerSummary.textContent = selected.length
+				? `${selected.length} batch${selected.length === 1 ? "" : "es"} selected`
+				: "Select one or more batches";
+			batchPickerSummary.classList.toggle("placeholder", selected.length === 0);
+		}
+
+		function renderBatchOptions(searchText = batchSearch.value) {
+			const normalizedSearch = searchText.trim().toLocaleLowerCase();
+			const filteredBatches = applicationLiveBatches.filter((batch) =>
+				batch.toLocaleLowerCase().includes(normalizedSearch)
+			);
+			batchOptionsList.replaceChildren();
+			if (filteredBatches.length === 0) {
+				const emptyMessage = document.createElement("li");
+				emptyMessage.className = "no-name-results";
+				emptyMessage.textContent = "No matching batches.";
+				batchOptionsList.append(emptyMessage);
+				return;
+			}
+
+			for (const batch of filteredBatches) {
+				const item = document.createElement("li");
+				const row = document.createElement("div");
+				row.className = "batch-option-row";
+				const checkbox = document.createElement("input");
+				checkbox.className = "batch-option-check";
+				checkbox.type = "checkbox";
+				checkbox.checked = selectedBatchNames.has(batch);
+				checkbox.setAttribute("aria-label", `Select ${batch}`);
+				checkbox.addEventListener("change", () => {
+					if (checkbox.checked) selectedBatchNames.add(batch);
+					else selectedBatchNames.delete(batch);
+					updateBatchPickerSummary();
+					renderBatchOptions();
+				});
+				const option = document.createElement("button");
+				option.className = "batch-option";
+				option.type = "button";
+				option.setAttribute("role", "option");
+				option.setAttribute("aria-selected", String(selectedBatchNames.has(batch)));
+				option.textContent = batch;
+				option.addEventListener("click", () => {
+					if (selectedBatchNames.has(batch)) selectedBatchNames.delete(batch);
+					else selectedBatchNames.add(batch);
+					updateBatchPickerSummary();
+					renderBatchOptions();
+				});
+				row.append(checkbox, option);
+				if (currentRole === "Admin") {
+					const deleteButton = document.createElement("button");
+					deleteButton.className = "batch-delete";
+					deleteButton.type = "button";
+					deleteButton.textContent = "Delete";
+					deleteButton.setAttribute("aria-label", `Delete ${batch}`);
+					deleteButton.addEventListener("click", async () => {
+						await updateManagedBatch(batch, "delete");
+					});
+					row.append(deleteButton);
+				}
+				item.append(row);
+				batchOptionsList.append(item);
+			}
+		}
+
+		function setBatchAdminStatus(text, isError = false) {
+			batchAdminStatus.textContent = text;
+			batchAdminStatus.classList.toggle("error", isError);
+		}
+
+		function batchKey(batch) {
+			return [...batch.toLocaleLowerCase()]
+				.map((character) => character.codePointAt(0).toString(16))
+				.join("_");
+		}
+
+		async function updateManagedBatch(batch, action) {
+			if (currentRole !== "Admin") {
+				setBatchAdminStatus("Only Admin can manage batches.", true);
+				return;
+			}
+
+			const normalizedBatch = batch.trim().replace(/\s+/g, " ");
+			if (!normalizedBatch) {
+				setBatchAdminStatus("Enter a batch name first.", true);
+				return;
+			}
+
+			try {
+				const result = await runTransaction(applicationLiveBatchesRef, (existing) => {
+					const hasInitializedList = existing?.initialized === true
+						&& existing.entries
+						&& typeof existing.entries === "object";
+					const entries = hasInitializedList
+						? { ...existing.entries }
+						: Object.fromEntries(initialApplicationLiveBatches.map((initialBatch) => [
+							batchKey(initialBatch),
+							initialBatch
+						]));
+					const key = batchKey(normalizedBatch);
+
+					if (action === "add") {
+						if (entries[key]) return;
+						entries[key] = normalizedBatch;
+					} else {
+						if (!entries[key]) return;
+						delete entries[key];
+					}
+					return { initialized: true, entries };
+				});
+
+				if (!result.committed) {
+					setBatchAdminStatus(
+						action === "add" ? "That batch is already in the list." : "That batch is no longer in the list.",
+						true
+					);
+					return;
+				}
+				if (action === "add") selectedBatchNames.add(normalizedBatch);
+				else selectedBatchNames.delete(normalizedBatch);
+				setBatchAdminStatus(action === "add" ? `${normalizedBatch} added.` : `${normalizedBatch} deleted.`);
+				updateBatchPickerSummary();
+				renderBatchOptions();
+			} catch (error) {
+				setBatchAdminStatus("Could not update batches. Check Firebase Database Rules.", true);
+				console.error(`Could not ${action} Application Live batch:`, error);
+			}
+		}
+
+		function setYoutubeChannelAdminStatus(text, isError = false) {
+			youtubeChannelAdminStatus.textContent = text;
+			youtubeChannelAdminStatus.classList.toggle("error", isError);
+		}
+
+		function youtubeChannelKey(channel) {
+			return encodeURIComponent(channel.toLocaleLowerCase());
+		}
+
+		async function updateManagedYoutubeChannel(channel, action) {
+			if (currentRole !== "Admin") {
+				setYoutubeChannelAdminStatus("Only Admin can manage YouTube channels.", true);
+				return;
+			}
+
+			const normalizedChannel = channel.trim().replace(/\s+/g, " ");
+			if (!normalizedChannel) {
+				setYoutubeChannelAdminStatus("Enter a channel name first.", true);
+				return;
+			}
+
+			try {
+				const result = await runTransaction(youtubeChannelsRef, (existing) => {
+					const hasInitializedList = existing?.initialized === true
+						&& existing.entries
+						&& typeof existing.entries === "object";
+					const entries = hasInitializedList
+						? { ...existing.entries }
+						: Object.fromEntries(initialYoutubeChannels.map((initialChannel) => [
+							youtubeChannelKey(initialChannel),
+							initialChannel
+						]));
+					const key = youtubeChannelKey(normalizedChannel);
+
+					if (action === "add") {
+						if (entries[key]) return;
+						entries[key] = normalizedChannel;
+					} else {
+						if (!entries[key]) return;
+						delete entries[key];
+					}
+					return { initialized: true, entries };
+				});
+
+				if (!result.committed) {
+					setYoutubeChannelAdminStatus(
+						action === "add" ? "That channel is already in the list." : "That channel is no longer in the list.",
+						true
+					);
+					return;
+				}
+				setYoutubeChannelAdminStatus(action === "add" ? `${normalizedChannel} added.` : `${normalizedChannel} deleted.`);
+			} catch (error) {
+				setYoutubeChannelAdminStatus("Could not update channels. Check Firebase Database Rules.", true);
+				console.error(`Could not ${action} YouTube channel:`, error);
+			}
+		}
+
+		function setNameAdminStatus(text, isError = false) {
+			nameAdminStatus.textContent = text;
+			nameAdminStatus.classList.toggle("error", isError);
+		}
+
+		function nameKey(name) {
+			return encodeURIComponent(name);
+		}
+
+		async function updateManagedName(name, action) {
+			if (currentRole !== "Admin") {
+				setNameAdminStatus("Only Admin can manage names.", true);
+				return;
+			}
+
+			const normalizedName = name.trim().replace(/\s+/g, " ").toLocaleUpperCase();
+			if (!normalizedName) {
+				setNameAdminStatus("Enter a name first.", true);
+				return;
+			}
+
+			try {
+				const result = await runTransaction(namesRef, (existing) => {
+					const hasInitializedList = existing?.initialized === true
+						&& existing.entries
+						&& typeof existing.entries === "object";
+					const entries = hasInitializedList
+						? { ...existing.entries }
+						: Object.fromEntries(initialNames.map((initialName) => [nameKey(initialName), initialName]));
+					const key = nameKey(normalizedName);
+
+					if (action === "add") {
+						if (entries[key]) return;
+						entries[key] = normalizedName;
+					} else {
+						if (!entries[key]) return;
+						delete entries[key];
+					}
+					return { initialized: true, entries };
+				});
+
+				if (!result.committed) {
+					setNameAdminStatus(action === "add" ? "That name is already in the list." : "That name is no longer in the list.", true);
+					return;
+				}
+				setNameAdminStatus(action === "add" ? `${normalizedName} added.` : `${normalizedName} deleted.`);
+			} catch (error) {
+				setNameAdminStatus("Could not update names. Check Firebase Database Rules.", true);
+				console.error(`Could not ${action} managed name:`, error);
+			}
+		}
+
+		populateTimes();
+		populateDateOptions();
+		scheduleDateRefresh();
+		renderNameOptions();
+
+		if (!studioName) {
+			setMessage("The selected studio is invalid. Return to the dashboard and choose a studio.", "error");
+			confirmButton.disabled = true;
+		} else {
+			document.querySelector("#booking-title").textContent = `Book ${studioName}`;
+		}
+
+		setPersistence(auth, browserLocalPersistence).then(() => {
+			onAuthStateChanged(auth, async (user) => {
+				const allowedEmails = new Set(["websankul@gmail.com", "ho.websankul@gmail.com"]);
+				if (!user || !user.email || !allowedEmails.has(user.email.toLowerCase())) {
+					try {
+						if (user) await signOut(auth);
+						window.location.replace("loginpage.html");
+					} catch (error) {
+						setMessage("Could not verify this account. Please return to sign in.", "error");
+						console.error("Booking page account verification failed:", error);
+					}
+					return;
+				}
+
+				currentUser = user;
+				currentRole = user.email.toLowerCase() === "websankul@gmail.com" ? "Admin" : "Faculty";
+				adminTools.hidden = currentRole !== "Admin";
+				youtubeChannelAdminTools.hidden = currentRole !== "Admin";
+				batchAdminTools.hidden = currentRole !== "Admin";
+				renderNameOptions(nameSearch.value);
+				renderBatchOptions();
+				updateYoutubeChannelVisibility();
+				onValue(studioListRef, (snapshot) => {
+					const list = snapshot.val();
+					if (list?.initialized === true) {
+						const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
+						const managedStudios = Object.values(entries)
+							.filter((studio) => studio && typeof studio.key === "string" && typeof studio.name === "string")
+							.map((studio) => ({ key: studio.key, name: studio.name }));
+						applyManagedStudios(managedStudios);
+					} else {
+						applyManagedStudios([...initialStudios]);
+					}
+				}, (error) => {
+					setMessage("Studio list could not be loaded. Check Firebase Realtime Database rules.", "error");
+					console.error("Firebase studio list load failed:", error);
+				});
+			}, (error) => {
+				setMessage("Could not verify your sign-in. Please try again.", "error");
+				console.error("Booking page authentication state failed:", error);
+			});
+		}).catch((error) => {
+			setMessage("Could not keep your sign-in session. Check your browser storage settings.", "error");
+			console.error("Booking page local session persistence failed:", error);
+		});
+
+		namePickerButton.addEventListener("click", () => {
+			const isOpening = namePickerPanel.hidden;
+			namePickerPanel.hidden = !isOpening;
+			namePickerButton.setAttribute("aria-expanded", String(isOpening));
+			if (isOpening) {
+				renderNameOptions(nameSearch.value);
+				nameSearch.focus();
+			}
+		});
+
+		nameSearch.addEventListener("input", () => renderNameOptions(nameSearch.value));
+		nameSearch.addEventListener("keydown", (event) => {
+			if (event.key === "Escape") {
+				namePickerPanel.hidden = true;
+				namePickerButton.setAttribute("aria-expanded", "false");
+				namePickerButton.focus();
+			} else if (event.key === "Enter") {
+				event.preventDefault();
+				nameOptions.querySelector(".name-option")?.click();
+			}
+		});
+
+		document.addEventListener("pointerdown", (event) => {
+			if (!namePicker.contains(event.target)) {
+				namePickerPanel.hidden = true;
+				namePickerButton.setAttribute("aria-expanded", "false");
+			}
+		});
+
+		document.querySelector("#add-name-button").addEventListener("click", async () => {
+			const name = newNameInput.value;
+			await updateManagedName(name, "add");
+			if (nameAdminStatus.classList.contains("error")) return;
+			newNameInput.value = "";
+			renderNameOptions(nameSearch.value);
+		});
+
+		document.querySelector("#add-youtube-channel-button").addEventListener("click", async () => {
+			const channel = newYoutubeChannelInput.value;
+			await updateManagedYoutubeChannel(channel, "add");
+			if (youtubeChannelAdminStatus.classList.contains("error")) return;
+			newYoutubeChannelInput.value = "";
+		});
+
+		document.querySelector("#add-batch-button").addEventListener("click", async () => {
+			const batch = newBatchNameInput.value;
+			await updateManagedBatch(batch, "add");
+			if (batchAdminStatus.classList.contains("error")) return;
+			newBatchNameInput.value = "";
+			batchSearch.value = "";
+			renderBatchOptions();
+		});
+
+		newBatchNameInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				document.querySelector("#add-batch-button").click();
+			}
+		});
+
+		batchPickerButton.addEventListener("click", () => {
+			if (purposeSelect.value !== "Application Live") return;
+			const isOpening = batchPickerOptions.hidden;
+			batchPickerOptions.hidden = !isOpening;
+			batchPickerButton.setAttribute("aria-expanded", String(isOpening));
+			if (isOpening) {
+				renderBatchOptions();
+				batchSearch.focus();
+			}
+		});
+
+		batchSearch.addEventListener("input", () => renderBatchOptions(batchSearch.value));
+
+		document.addEventListener("pointerdown", (event) => {
+			if (!batchPicker.contains(event.target)) {
+				batchPickerOptions.hidden = true;
+				batchPickerButton.setAttribute("aria-expanded", "false");
+			}
+		});
+
+		purposeSelect.addEventListener("change", () => {
+			updateYoutubeChannelVisibility();
+			updateBatchPickerVisibility();
+		});
+
+		newYoutubeChannelInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				document.querySelector("#add-youtube-channel-button").click();
+			}
+		});
+
+		newNameInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				document.querySelector("#add-name-button").click();
+			}
+		});
+
+		onValue(namesRef, (snapshot) => {
+			const list = snapshot.val();
+			if (list?.initialized === true) {
+				const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
+				names = [...new Set(Object.values(entries).filter((name) => typeof name === "string"))]
+					.sort((first, second) => first.localeCompare(second));
+			} else {
+				names = [...initialNames];
+			}
+
+			if (nameInput.value && !names.includes(nameInput.value)) {
+				nameInput.value = "";
+				selectedName.textContent = "Select a name";
+				selectedName.classList.add("placeholder");
+			}
+			renderNameOptions(nameSearch.value);
+		}, (error) => {
+			setMessage("Name list could not be loaded. Check Firebase Database Rules.", "error");
+			console.error("Could not load managed names:", error);
+		});
+
+		onValue(youtubeChannelsRef, (snapshot) => {
+			const list = snapshot.val();
+			if (list?.initialized === true) {
+				const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
+				youtubeChannels = [...new Set(Object.values(entries).filter((channel) => typeof channel === "string"))]
+					.sort((first, second) => first.localeCompare(second));
+			} else {
+				youtubeChannels = [...initialYoutubeChannels];
+			}
+			for (const channel of selectedYoutubeChannels) {
+				if (!youtubeChannels.includes(channel)) selectedYoutubeChannels.delete(channel);
+			}
+			renderYoutubeChannelOptions();
+			updateYoutubeChannelSummary();
+		}, (error) => {
+			setMessage("YouTube channel list could not be loaded. Check Firebase Database Rules.", "error");
+			console.error("Could not load managed YouTube channels:", error);
+		});
+
+		onValue(applicationLiveBatchesRef, (snapshot) => {
+			const list = snapshot.val();
+			if (list?.initialized === true) {
+				const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
+				applicationLiveBatches = [...new Set(Object.values(entries).filter((batch) => typeof batch === "string"))]
+					.sort((first, second) => first.localeCompare(second));
+			} else {
+				applicationLiveBatches = [...initialApplicationLiveBatches];
+			}
+			for (const batch of selectedBatchNames) {
+				if (!applicationLiveBatches.includes(batch)) selectedBatchNames.delete(batch);
+			}
+			renderBatchOptions();
+			updateBatchPickerSummary();
+		}, (error) => {
+			setMessage("Application Live batches could not be loaded. Check Firebase Database Rules.", "error");
+			console.error("Could not load Application Live batches:", error);
+		});
+
+		document.querySelector("#start-time").addEventListener("change", (event) => {
+			const startTime = event.currentTarget.value;
+			const endTime = document.querySelector("#end-time");
+			for (const option of endTime.options) {
+				option.disabled = Boolean(option.value) && option.value <= startTime;
+			}
+			if (endTime.value && endTime.value <= startTime) endTime.value = "";
+		});
+
+		updateBatchPickerVisibility();
+		youtubeChannelButton.addEventListener("click", () => {
+			if (currentRole !== "Admin" || purposeSelect.value !== "YouTube Live") return;
+			const isOpening = youtubeChannelOptions.hidden;
+			youtubeChannelOptions.hidden = !isOpening;
+			youtubeChannelButton.setAttribute("aria-expanded", String(isOpening));
+		});
+
+		document.addEventListener("pointerdown", (event) => {
+			if (!youtubeChannelPicker.contains(event.target)) {
+				youtubeChannelOptions.hidden = true;
+				youtubeChannelButton.setAttribute("aria-expanded", "false");
+			}
+		});
+
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			if (unsyncedBooking) {
+				confirmButton.disabled = true;
+				setMessage("Retrying Google Sheet sync without creating a duplicate booking…");
+				try {
+					await syncBookingWithSheet(unsyncedBooking.sheetBooking);
+					const date = unsyncedBooking.booking.date;
+					unsyncedBooking = null;
+					confirmButton.textContent = "Confirm Booking";
+					setMessage("Booking confirmed and added to the Google Sheet. Returning to the dashboard…", "success");
+					window.setTimeout(() => {
+						window.location.replace(`dashboard.html?date=${encodeURIComponent(date)}`);
+					}, 500);
+				} catch (error) {
+					setMessage(`Booking is saved in Firebase, but Google Sheet sync failed: ${error.message}. Select Confirm Booking to retry.`, "error");
+					console.error("Google Sheet booking retry failed:", error);
+				} finally {
+					confirmButton.disabled = false;
+				}
+				return;
+			}
+			if (!studioName || !studioKey || !currentUser) {
+				setMessage("Your sign-in is not ready. Please try again.", "error");
+				return;
+			}
+			if (!names.includes(nameInput.value)) {
+				setMessage("Select a name from the list before confirming the booking.", "error");
+				namePickerButton.focus();
+				return;
+			}
+
+			const formData = new FormData(form);
+			const startTime = String(formData.get("startTime") ?? "");
+			const endTime = String(formData.get("endTime") ?? "");
+			const purpose = String(formData.get("purpose") ?? "");
+			if (purpose === "Application Live" && (
+				selectedBatchNames.size === 0
+				|| [...selectedBatchNames].some((batch) => !applicationLiveBatches.includes(batch))
+			)) {
+				setMessage("Select at least one batch for Application Live.", "error");
+				batchPickerButton.focus();
+				return;
+			}
+			if (currentRole === "Admin" && purposeSelect.value === "YouTube Live" && selectedYoutubeChannels.size === 0) {
+				setMessage("Select at least one YouTube channel for a live booking.", "error");
+				youtubeChannelButton.focus();
+				return;
+			}
+			if (endTime <= startTime) {
+				setMessage("End time must be later than start time.", "error");
+				return;
+			}
+
+			confirmButton.disabled = true;
+			setMessage("Saving your booking…");
+			const bookingRef = push(ref(database, `bookings/${studioKey}`));
+			let reservedSlotKeys = [];
+			let bookingDate = "";
+			try {
+				const booking = {
+					name: String(formData.get("name") ?? "").trim(),
+					date: String(formData.get("date") ?? ""),
+					startTime,
+					endTime,
+					time: startTime,
+					purpose,
+					youtubeChannels: currentRole === "Admin" && purpose === "YouTube Live"
+						? youtubeChannels.filter((channel) => selectedYoutubeChannels.has(channel))
+						: [],
+					batchNames: purpose === "Application Live"
+						? applicationLiveBatches.filter((batch) => selectedBatchNames.has(batch))
+						: [],
+					subject: String(formData.get("subject") ?? "").trim(),
+					userId: currentUser.uid,
+					createdAt: Date.now()
+				};
+				bookingDate = booking.date;
+				reservedSlotKeys = await reserveBookingSlots(booking, `${studioKey}/${bookingRef.key}`);
+				await set(bookingRef, booking);
+				const sheetBooking = {
+					...booking,
+					bookingId: `${studioKey}/${bookingRef.key}`,
+					studio: studioName
+				};
+				navigatingAfterBooking = true;
+				unsyncedBooking = { booking, sheetBooking };
+				try {
+					await sendBookingToSheet(sheetBooking);
+					unsyncedBooking = null;
+					setMessage("Booking saved. Returning to the dashboard; Google Sheet sync is being processed…", "success");
+				} catch (error) {
+					setMessage(`Booking saved in Firebase. Google Sheet sync could not be started: ${error.message}. Returning to the dashboard…`, "error");
+					console.error("Could not start Google Sheet booking sync:", error);
+				}
+				confirmButton.disabled = true;
+				window.setTimeout(() => {
+					window.location.replace(`dashboard.html?date=${encodeURIComponent(booking.date)}`);
+				}, 250);
+			} catch (error) {
+				if (reservedSlotKeys.length > 0) {
+					try {
+						await releaseBookingSlots(bookingDate, reservedSlotKeys, `${studioKey}/${bookingRef.key}`);
+					} catch (releaseError) {
+						console.error("Could not release reserved booking slots after save failure:", releaseError);
+					}
+				}
+				const errorCode = typeof error?.code === "string" ? error.code : "unknown";
+				const errorDetails = typeof error?.message === "string" ? error.message : "No additional error details.";
+				if (errorDetails.includes("already has a booking") || errorDetails.includes("just booked by someone else")) {
+					setMessage(errorDetails, "error");
+				} else if (errorCode === "PERMISSION_DENIED" || errorDetails.includes("PERMISSION_DENIED")) {
+					setMessage(
+						"Firebase rejected this booking (PERMISSION_DENIED). Publish the updated Realtime Database Rules, including the bookingSlots rules, then try again.",
+						"error"
+					);
+				} else {
+					setMessage(`Booking could not be saved (${errorCode}): ${errorDetails}`, "error");
+				}
+				console.error("Firebase booking save failed:", error);
+			} finally {
+				confirmButton.disabled = navigatingAfterBooking;
+			}
+		});
+
+		document.querySelector("#sign-out-button").addEventListener("click", async (event) => {
+			const button = event.currentTarget;
+			button.disabled = true;
+			try {
+				await signOut(auth);
+				window.location.replace("loginpage.html");
+			} catch (error) {
+				button.disabled = false;
+				setMessage("Could not sign out. Please try again.", "error");
+				console.error("Firebase sign-out failed:", error);
+			}
+		});
+	</script>
+</body>
+</html>

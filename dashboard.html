@@ -1,0 +1,1550 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#f4f5ef">
+	<title>Dashboard | Websankul</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--ink: #1d2d2c;
+			--muted: #687976;
+			--line: #d7e1de;
+			--paper: #eef5f2;
+			--white: #fff;
+			--green: #176b68;
+			--green-dark: #104c4b;
+			--lime: #ffbd8a;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			min-height: 100vh;
+			margin: 0;
+			padding: 32px 20px;
+			color: var(--ink);
+			background-color: var(--paper);
+			background-image: radial-gradient(circle at 14% 15%, rgb(23 107 104 / 12%), transparent 28%), radial-gradient(circle at 88% 80%, rgb(255 189 138 / 18%), transparent 30%), radial-gradient(#d1ded9 0.7px, transparent 0.7px);
+			background-size: auto, auto, 18px 18px;
+			font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+		}
+
+		.dashboard {
+			width: min(100%, 1180px);
+			margin: 0 auto;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 16px;
+			padding: 16px 20px;
+			color: #f8f8ef;
+			background-color: #155b5b;
+			background-image: radial-gradient(rgb(255 255 255 / 8%) 0.7px, transparent 0.7px), linear-gradient(145deg, #123d49 0%, #176b68 58%, #56a292 100%);
+			background-size: 16px 16px, auto;
+			border: 1px solid rgb(21 63 54 / 15%);
+			border-radius: 12px;
+			box-shadow: 0 9px 24px rgb(25 64 49 / 18%);
+		}
+
+		.brand { margin: 0; color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0.01em; }
+		.header-actions:last-child { margin-left: auto; }
+
+		.header-actions {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		button, .header-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 36px;
+			padding: 0 12px;
+			color: #1d2d2c;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			cursor: pointer;
+			font: inherit;
+			font-size: 12px;
+			font-weight: 600;
+			text-decoration: none;
+		}
+
+		button:hover, .header-button:hover { background: #eef5f2; }
+		.header-actions button, .header-actions .header-button {
+			color: #f8f8ef;
+			background: rgb(255 255 255 / 10%);
+			border-color: rgb(255 255 255 / 32%);
+		}
+		.header-actions button:hover, .header-actions .header-button:hover { background: rgb(255 255 255 / 20%); }
+		button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgb(23 107 104 / 30%); outline-offset: 2px; }
+		button:disabled { cursor: wait; opacity: 0.7; }
+
+		.date-nav { gap: 7px; }
+		.date-nav button {
+			color: #104c4b;
+			background: #eef5f2;
+			border-color: #d7e1de;
+		}
+		.date-nav button:hover { background: #e2eeea; }
+		#date-label { min-width: 116px; color: #104c4b; text-align: center; font-size: 12px; font-weight: 600; }
+
+		main { padding: 12px 0 30px; }
+
+		.schedule-title-card {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 14px;
+			margin: 0 0 12px;
+			padding: 16px 20px;
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			box-shadow: 0 5px 18px rgb(32 57 49 / 8%);
+		}
+
+		.schedule-title-card h2 { margin: 0; color: #176b68; font-size: 20px; font-weight: 700; }
+
+		.schedule-status {
+			margin: 0 0 12px;
+			color: var(--muted);
+			text-align: center;
+			font-size: 12px;
+		}
+
+		.schedule-status.error { color: #b42318; }
+		.schedule-status, .studio-management-status, .range-result { display: none !important; }
+
+		#action-toast {
+			position: fixed;
+			z-index: 1000;
+			top: 18px;
+			left: 50%;
+			width: min(560px, calc(100% - 28px));
+			padding: 13px 18px;
+			color: #fff;
+			background: var(--green-dark);
+			border: 1px solid rgb(255 255 255 / 24%);
+			border-radius: 9px;
+			box-shadow: 0 10px 30px rgb(16 45 40 / 25%);
+			text-align: center;
+			font-size: 14px;
+			font-weight: 600;
+			transform: translate(-50%, -16px);
+			opacity: 0;
+			visibility: hidden;
+			transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+		}
+		#action-toast.visible { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+		#action-toast.error { background: #b42318; }
+
+		.range-section {
+			margin: 0 0 14px;
+			padding: 16px;
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			box-shadow: 0 5px 18px rgb(32 57 49 / 8%);
+		}
+
+		.range-section h2 { margin: 0 0 14px; color: #176b68; font-size: 15px; font-weight: 700; }
+		.range-section.admin-tools h2 { color: #ba4141; }
+		.range-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 12px; }
+		.range-controls label { display: grid; gap: 6px; color: #4b5563; font-size: 12px; }
+		.range-controls input { width: 100%; min-height: 38px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+		.range-button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 12px; color: #fff; border: 0; border-radius: 6px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+		.delete-button, .delete-button:hover { background: #dc2626; }
+		.export-button, .export-button:hover { background: #176b68; }
+		.range-result { min-height: 16px; margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+		.range-result.error { color: #b42318; }
+		.studio-management-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+		.studio-management-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; background: #f4f8f6; border: 1px solid var(--line); border-radius: 6px; }
+		.studio-management-name { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
+		.studio-management-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+		.studio-management-actions button { min-height: 30px; padding: 4px 9px; }
+		.studio-management-actions .studio-delete-button { color: #a1261d; background: #fff; border-color: #f0c6c2; }
+		.studio-add-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+		.studio-add-controls label { display: grid; gap: 6px; color: #4b5563; font-size: 12px; }
+		.studio-add-controls input { width: 100%; min-height: 38px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+		.studio-management-status { min-height: 16px; margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+		.studio-management-status.error { color: #b42318; }
+
+		.studio-section {
+			margin: 0 0 14px;
+			padding: 16px;
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			box-shadow: 0 5px 18px rgb(32 57 49 / 8%);
+		}
+
+		.studio-section h2 { margin: 0 0 12px; color: #176b68; font-size: 15px; font-weight: 700; }
+
+		.table-wrap { width: 100%; overflow-x: auto; }
+
+		table { width: 100%; border-collapse: collapse; font-size: 12px; }
+		th {
+			padding: 10px 8px;
+			color: #687976;
+			background: #f4f8f6;
+			font-size: 10px;
+			font-weight: 600;
+			text-align: left;
+			text-transform: uppercase;
+			white-space: nowrap;
+		}
+
+		td { padding: 10px 8px; border-bottom: 1px solid #edf2f0; }
+		.booking-row td { font-weight: 700; }
+		.booking-row td button { font-weight: 600; }
+		.empty-row td { color: #899591; text-align: center; }
+		#edit-booking-dialog {
+			width: min(640px, calc(100% - 28px));
+			max-height: min(90vh, 760px);
+			padding: 22px;
+			color: var(--ink);
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			box-shadow: 0 18px 55px rgb(16 45 40 / 28%);
+		}
+		#edit-booking-dialog::backdrop { background: rgb(10 28 26 / 58%); }
+		.edit-booking-form { display: grid; gap: 14px; }
+		.edit-booking-form h2 { margin: 0; color: var(--green); font-size: 20px; }
+		.edit-booking-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+		.edit-booking-fields label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+		.edit-booking-fields [hidden] { display: none; }
+		.edit-booking-fields input, .edit-booking-fields select, .edit-booking-fields textarea {
+			width: 100%; min-height: 40px; padding: 8px 10px; color: var(--ink);
+			background: #fff; border: 1px solid var(--line); border-radius: 6px; font: inherit;
+		}
+		.edit-booking-fields textarea { min-height: 76px; resize: vertical; }
+		.edit-booking-fields .edit-full-width { grid-column: 1 / -1; }
+		.edit-booking-help { margin: -8px 0 0; color: var(--muted); font-size: 11px; }
+		.edit-booking-actions { display: flex; justify-content: flex-end; gap: 8px; }
+		.edit-booking-actions .edit-save-button { color: #fff; background: var(--green); border-color: var(--green); }
+
+		.book-button {
+			display: flex;
+			width: 100%;
+			min-height: 36px;
+			margin-top: 10px;
+			color: #fff;
+			background: var(--green);
+			border: 0;
+			border-radius: 6px;
+			font-size: 12px;
+			font-weight: 700;
+		}
+
+		.book-button:hover { background: var(--green-dark); }
+
+		@media (max-width: 600px) {
+			body { padding: 14px 10px; }
+			header { padding: 14px; }
+			.header-actions { width: 100%; justify-content: flex-start; }
+			.studio-section { padding: 12px; }
+			.range-controls { grid-template-columns: 1fr; }
+			.range-button { width: 100%; }
+			.edit-booking-fields { grid-template-columns: 1fr; }
+			.edit-booking-fields .edit-full-width { grid-column: auto; }
+			th, td { padding: 9px 7px; }
+			.table-wrap table { min-width: 680px; }
+		}
+	</style>
+</head>
+<body>
+	<div class="dashboard">
+		<header>
+			<h1 class="brand" id="welcome-heading">Welcome</h1>
+			<nav class="header-actions" aria-label="Dashboard navigation">
+				<a class="header-button" href="dashboard.html">Dashboard</a>
+				<button id="sign-out-button" type="button">Sign out</button>
+			</nav>
+		</header>
+		<main id="main-dashboard">
+			<section class="schedule-title-card" aria-labelledby="schedule-title">
+				<h2 id="schedule-title">Studio Booking Schedules</h2>
+				<nav class="header-actions date-nav" aria-label="Schedule date">
+					<button id="previous-day" type="button">Previous</button>
+					<time id="date-label"></time>
+					<button id="next-day" type="button">Next</button>
+				</nav>
+			</section>
+			<p class="schedule-status" id="schedule-status" role="status"></p>
+			<div id="studio-schedules"></div>
+			<section class="range-section admin-tools" id="admin-tools" hidden>
+				<h2>Admin: Manage Studios</h2>
+				<p>Add studios or edit/delete their names. Deleting a studio keeps its existing bookings in Firebase.</p>
+				<div class="studio-add-controls">
+					<label for="new-studio-name">New Studio Name<input id="new-studio-name" type="text" maxlength="100" placeholder="Enter studio name"></label>
+					<button class="range-button export-button" id="add-studio-button" type="button">Add Studio</button>
+				</div>
+				<ul class="studio-management-list" id="studio-management-list" aria-label="Manage studios"></ul>
+				<p class="studio-management-status" id="studio-management-status" role="status"></p>
+			</section>
+			<section class="range-section admin-tools" id="booking-admin-tools" hidden>
+				<h2>Admin: Delete Old Bookings</h2>
+				<div class="range-controls">
+					<label>Start Date<input id="delete-start-date" type="date" required></label>
+					<label>End Date<input id="delete-end-date" type="date" required></label>
+					<button class="range-button delete-button" id="delete-range-button" type="button">Delete Range</button>
+				</div>
+				<p class="range-result" id="delete-result" role="status"></p>
+			</section>
+			<section class="range-section">
+				<h2>Export Bookings to CSV</h2>
+				<div class="range-controls">
+					<label>Start Date<input id="export-start-date" type="date" required></label>
+					<label>End Date<input id="export-end-date" type="date" required></label>
+					<button class="range-button export-button" id="export-range-button" type="button">Export CSV</button>
+				</div>
+				<p class="range-result" id="export-result" role="status"></p>
+			</section>
+			<section class="range-section admin-tools" id="google-sheet-tools" hidden>
+				<h2>Google Sheet</h2>
+				<p>Bookings are synchronized with this sheet when created, edited, or deleted.</p>
+				<div class="range-controls">
+					<label>Sheet URL<input id="google-sheet-url" type="url" readonly value="https://docs.google.com/spreadsheets/d/1AdHaLgEG3PjD-lXzjjqLSsFpdb0VCWzIh6-HZ_dbpf8/edit?gid=0#gid=0"></label>
+					<a class="range-button export-button" id="open-google-sheet" href="https://docs.google.com/spreadsheets/d/1AdHaLgEG3PjD-lXzjjqLSsFpdb0VCWzIh6-HZ_dbpf8/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Open</a>
+				</div>
+				<p class="range-result" id="google-sheet-status" role="status"></p>
+			</section>
+		</main>
+		<div id="action-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+		<dialog id="edit-booking-dialog" aria-labelledby="edit-booking-title">
+			<form class="edit-booking-form" id="edit-booking-form" method="dialog">
+				<h2 id="edit-booking-title">Edit Booking</h2>
+				<div class="edit-booking-fields">
+					<label>Name<input id="edit-booking-name" name="name" type="text" maxlength="100" required></label>
+					<label>Date<input id="edit-booking-date" name="date" type="date" required></label>
+					<label>Start Time<select id="edit-booking-start-time" name="startTime" required></select></label>
+					<label>End Time<select id="edit-booking-end-time" name="endTime" required></select></label>
+					<label>Purpose
+						<select id="edit-booking-purpose" name="purpose" required>
+							<option value="YouTube Live">YouTube Live</option>
+							<option value="YouTube Recording">YouTube Recording</option>
+							<option value="Planner">Planner</option>
+							<option value="Smart Course">Smart Course</option>
+							<option value="Application Live">Application Live</option>
+						</select>
+					</label>
+					<label>Subject<input id="edit-booking-subject" name="subject" type="text" maxlength="120" required></label>
+					<label class="edit-full-width" id="edit-booking-channels-field">YouTube Channel(s)
+						<textarea id="edit-booking-channels" name="youtubeChannels" placeholder="Separate multiple channels with commas"></textarea>
+					</label>
+					<p class="edit-booking-help edit-full-width" id="edit-booking-channels-help">Enter one or more channel names, separated by commas.</p>
+					<label class="edit-full-width" id="edit-booking-batches-field">Application Live Batch Name(s)
+						<textarea id="edit-booking-batches" name="batchNames" placeholder="Separate multiple batches with commas"></textarea>
+					</label>
+					<p class="edit-booking-help edit-full-width" id="edit-booking-batches-help">Enter one or more batch names, separated by commas.</p>
+				</div>
+				<div class="edit-booking-actions">
+					<button type="submit" value="cancel">Cancel</button>
+					<button class="edit-save-button" type="submit" value="save">Save Changes</button>
+				</div>
+			</form>
+		</dialog>
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+		import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+		import { endAt, equalTo, get, getDatabase, onValue, orderByChild, query, ref, remove, runTransaction, startAt, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyA2sDPaG8p8yXYXDDoF8U6cQDIZ5D5cfnk",
+			authDomain: "studiobookingapp-114a7.firebaseapp.com",
+			databaseURL: "https://studiobookingapp-114a7-default-rtdb.firebaseio.com",
+			projectId: "studiobookingapp-114a7",
+			storageBucket: "studiobookingapp-114a7.firebasestorage.app",
+			messagingSenderId: "356544436239",
+			appId: "1:356544436239:web:d4707344bacbb11afe6b7a",
+			measurementId: "G-ESREKNYNLV"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const auth = getAuth(app);
+		const database = getDatabase(app);
+		const rolesByEmail = new Map([
+			["websankul@gmail.com", "Admin"],
+			["ho.websankul@gmail.com", "Faculty"]
+		]);
+		const initialStudios = [
+			{ key: "studio1", name: "Studio 1" },
+			{ key: "studio2", name: "Studio 2" },
+			{ key: "studio3", name: "Studio 3" },
+			{ key: "studio4", name: "Studio 4" },
+			{ key: "sargasanStudio1", name: "Sargasan Studio 1" },
+			{ key: "sargasanStudio2", name: "Sargasan Studio 2" },
+			{ key: "sharanam1", name: "Sharanam 1" },
+			{ key: "sharanam2", name: "Sharanam 2" },
+			{ key: "sharanam3", name: "Sharanam 3" }
+		];
+		let studios = [...initialStudios];
+		const studiosRef = ref(database, "studioList");
+		const SHEETS_SYNC_URL = "https://script.google.com/macros/s/AKfycbxMA_HBB-ZWDdVl7SB1kQi0g48uW1F-wN3BCreQhqPG7L4seTWfErqEh4CRlE3si9H5ig/exec";
+		const databaseStatus = document.querySelector("#schedule-status");
+		const schedulesContainer = document.querySelector("#studio-schedules");
+		const actionToast = document.querySelector("#action-toast");
+		let actionToastTimer = 0;
+		const bookingsByStudio = new Map(studios.map((studio) => [studio.key, []]));
+		const stopListening = new Map();
+		const failedStudios = new Set();
+		const requestedDate = new URLSearchParams(window.location.search).get("date");
+		const parsedRequestedDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+			? new Date(`${requestedDate}T00:00:00`)
+			: null;
+		let currentDate = parsedRequestedDate
+			&& !Number.isNaN(parsedRequestedDate.getTime())
+			&& toDateKey(parsedRequestedDate) === requestedDate
+			? parsedRequestedDate
+			: new Date();
+		let currentUser = null;
+		let currentRole = null;
+		let flushingSheetSyncQueue = false;
+
+		function showActionToast(message, isError = false) {
+			actionToast.textContent = message;
+			actionToast.classList.toggle("error", isError);
+			actionToast.classList.add("visible");
+			window.clearTimeout(actionToastTimer);
+			actionToastTimer = window.setTimeout(() => {
+				actionToast.classList.remove("visible");
+				actionToast.textContent = "";
+			}, 5000);
+		}
+
+		const statusObserver = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				const status = mutation.target.nodeType === Node.ELEMENT_NODE
+					? mutation.target
+					: mutation.target.parentElement;
+				if (!status?.matches(".schedule-status, .studio-management-status, .range-result")) continue;
+				const message = status.textContent.trim();
+				if (!message) continue;
+				const isRoutineConnection = /^(Connected to Firebase Realtime Database\.|Google Apps Script is connected\.|Google Sheet connected and all pending bookings are synchronized\.)$/.test(message);
+				status.textContent = "";
+				if (!isRoutineConnection) showActionToast(message, status.classList.contains("error"));
+			}
+		});
+		document.querySelectorAll(".schedule-status, .studio-management-status, .range-result").forEach((status) => {
+			statusObserver.observe(status, { childList: true, characterData: true, subtree: true });
+			if (status.textContent.trim()) status.textContent = "";
+		});
+
+		async function syncBookingsWithSheet(operation, payload) {
+			if (!SHEETS_SYNC_URL) throw new Error("Deploy the Google Apps Script and set SHEETS_SYNC_URL in dashboard.html and booking.html.");
+			if (!currentUser) throw new Error("Sign in before syncing bookings.");
+			const idToken = await currentUser.getIdToken();
+			const requestId = crypto.randomUUID();
+			const frame = document.createElement("iframe");
+			const form = document.createElement("form");
+			frame.name = `sheet-sync-${requestId}`;
+			frame.title = "Google Sheet sync";
+			frame.hidden = true;
+			form.method = "post";
+			form.action = SHEETS_SYNC_URL;
+			form.target = frame.name;
+			form.hidden = true;
+			for (const [name, value] of Object.entries({
+				idToken,
+				requestId,
+				payload: JSON.stringify({ operation, ...payload })
+			})) {
+				const input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value;
+				form.append(input);
+			}
+			document.body.append(frame, form);
+
+			return new Promise((resolve, reject) => {
+				const cleanup = () => {
+					window.removeEventListener("message", onMessage);
+					window.clearTimeout(timeout);
+					form.remove();
+					frame.remove();
+				};
+				const onMessage = (event) => {
+					if (event.source !== frame.contentWindow || event.data?.requestId !== requestId) return;
+					cleanup();
+					if (event.data.success) resolve();
+					else reject(new Error(event.data.message || "Google Sheet sync failed."));
+				};
+				const timeout = window.setTimeout(() => {
+					cleanup();
+					reject(new Error("Google Sheet did not respond. Check the Apps Script deployment URL and access settings."));
+				}, 20000);
+				window.addEventListener("message", onMessage);
+				form.submit();
+			});
+		}
+
+		function removePendingBookingUpserts(bookingIds) {
+			const ids = new Set(bookingIds);
+			const rawQueue = localStorage.getItem("studioBookingSheetSyncQueue");
+			if (!rawQueue) return;
+			let queue;
+			try {
+				queue = JSON.parse(rawQueue);
+			} catch (error) {
+				console.error("Could not inspect pending Google Sheet sync queue before deletion:", error);
+				return;
+			}
+			if (!Array.isArray(queue)) return;
+			const filteredQueue = queue.filter((item) => {
+				if (item?.operation !== "upsert") return true;
+				const queuedBookingId = item.payload?.booking?.bookingId;
+				return typeof queuedBookingId !== "string" || !ids.has(queuedBookingId);
+			});
+			if (filteredQueue.length !== queue.length) {
+				localStorage.setItem("studioBookingSheetSyncQueue", JSON.stringify(filteredQueue));
+			}
+		}
+
+		function bookingTimeMinutes(value) {
+			const match = /^(\d{2}):(\d{2})$/.exec(String(value || ""));
+			return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
+		}
+
+		function bookingSlotKeys(startTime, endTime) {
+			const start = bookingTimeMinutes(startTime);
+			const end = bookingTimeMinutes(endTime);
+			if (!Number.isFinite(start) || !Number.isFinite(end) || start % 30 !== 0 || end % 30 !== 0 || end <= start) {
+				throw new Error("Use valid start and end times in 30-minute increments.");
+			}
+			const keys = [];
+			for (let minute = start; minute < end; minute += 30) {
+				keys.push(`${String(Math.floor(minute / 60)).padStart(2, "0")}-${String(minute % 60).padStart(2, "0")}`);
+			}
+			return keys;
+		}
+
+		async function reserveBookingSlots(studioKey, booking, bookingId, excludedBookingKey = "") {
+			const bookingsSnapshot = await get(ref(database, `bookings/${studioKey}`));
+			const requestedStart = bookingTimeMinutes(booking.startTime);
+			const requestedEnd = bookingTimeMinutes(booking.endTime);
+			if (bookingsSnapshot.exists()) {
+				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
+					if (!existing || key === excludedBookingKey || existing.date !== booking.date) return false;
+					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
+					const existingEnd = bookingTimeMinutes(existing.endTime);
+					return Number.isFinite(existingStart) && Number.isFinite(existingEnd)
+						&& requestedStart < existingEnd && existingStart < requestedEnd;
+				});
+				if (conflict) throw new Error("This studio already has a booking during that time. Choose another time.");
+			}
+
+			const reservedKeys = [];
+			try {
+				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
+					const previous = await get(slotRef);
+					const alreadyOwned = previous.child("bookingId").val() === bookingId;
+					if (previous.exists() && !alreadyOwned) {
+						const staleOwnerId = String(previous.child("bookingId").val() || "");
+						const staleOwnerKey = staleOwnerId.startsWith(`${studioKey}/`)
+							? staleOwnerId.slice(studioKey.length + 1)
+							: "";
+						const reservedAt = Number(previous.child("reservedAt").val());
+						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+						const ownerExists = staleOwnerKey
+							? (await get(ref(database, `bookings/${studioKey}/${staleOwnerKey}`))).exists()
+							: true;
+						if (!ownerExists || reservationExpired) {
+							await runTransaction(slotRef, (current) =>
+								current?.bookingId === staleOwnerId ? null : undefined
+							);
+						}
+					}
+					const result = await runTransaction(slotRef, (current) => {
+						if (current === null) return { bookingId, userId: booking.userId, reservedAt: Date.now() };
+						if (current.bookingId === bookingId) return current;
+						return;
+					});
+					if (!result.committed) throw new Error("This studio time slot was just booked by someone else. Choose another time.");
+					if (!alreadyOwned) reservedKeys.push(slotKey);
+				}
+				return reservedKeys;
+			} catch (error) {
+				await releaseBookingSlots(studioKey, booking.date, reservedKeys, bookingId);
+				throw error;
+			}
+		}
+
+		async function releaseBookingSlots(studioKey, date, slotKeys, bookingId) {
+			for (const slotKey of slotKeys) {
+				const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === bookingId ? null : undefined
+				);
+			}
+		}
+
+		async function deleteBookingAndReleaseSlots(studioKey, bookingKey, bookingRecord) {
+			await remove(ref(database, `bookings/${studioKey}/${bookingKey}`));
+			const booking = bookingRecord.data && typeof bookingRecord.data === "object"
+				? bookingRecord.data
+				: bookingRecord;
+			const date = String(booking.date || bookingRecord.date || "");
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+				return "Slot cleanup skipped because the booking date is missing.";
+			}
+			const bookingId = `${studioKey}/${bookingKey}`;
+			try {
+				const slotsSnapshot = await get(ref(database, `bookingSlots/${studioKey}/${date}`));
+				const slotKeys = [];
+				slotsSnapshot.forEach((child) => {
+					const slotBookingId = String(child.child("bookingId").val() || "");
+					if ((slotBookingId === bookingId || slotBookingId === bookingKey) && child.key) slotKeys.push(child.key);
+				});
+				const failedSlots = [];
+				for (const slotKey of slotKeys) {
+					const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
+					try {
+						const result = await runTransaction(slotRef, (current) => {
+							const currentBookingId = String(current?.bookingId || "");
+							return currentBookingId === bookingId || currentBookingId === bookingKey ? null : undefined;
+						});
+						if (!result.committed) {
+							const remaining = await get(slotRef);
+							const remainingBookingId = String(remaining.child("bookingId").val() || "");
+							if (remainingBookingId === bookingId || remainingBookingId === bookingKey) {
+								await remove(slotRef);
+							}
+						}
+						const remaining = await get(slotRef);
+						const remainingBookingId = String(remaining.child("bookingId").val() || "");
+						if (remainingBookingId === bookingId || remainingBookingId === bookingKey) failedSlots.push(slotKey);
+					} catch (error) {
+						failedSlots.push(`${slotKey} (${error.message || "permission/network error"})`);
+					}
+				}
+				return failedSlots.length
+					? `Could not release slot(s): ${failedSlots.join(", ")}.`
+					: "";
+			} catch (error) {
+				return `Could not check reserved slots: ${error.message || "Firebase read failed"}.`;
+			}
+		}
+
+		async function cleanupOrphanBookingSlots() {
+			if (currentRole !== "Admin") return;
+			let cleanedCount = 0;
+			const failures = [];
+			const orphanBookingIds = new Set();
+			for (const studio of studios) {
+				const studioKey = studio.key;
+				const studioSnapshot = await get(ref(database, `bookingSlots/${studioKey}`));
+				if (!studioSnapshot.exists()) continue;
+				const bookingsSnapshot = await get(ref(database, `bookings/${studioKey}`));
+				const existingBookings = bookingsSnapshot.val() || {};
+				const dateSnapshots = [];
+				studioSnapshot.forEach((dateSnapshot) => {
+					if (dateSnapshot.key) dateSnapshots.push(dateSnapshot);
+				});
+
+				for (const dateSnapshot of dateSnapshots) {
+					const slotSnapshots = [];
+					dateSnapshot.forEach((slotSnapshot) => {
+						if (slotSnapshot.key) slotSnapshots.push(slotSnapshot);
+					});
+					for (const slotSnapshot of slotSnapshots) {
+						const bookingId = String(slotSnapshot.child("bookingId").val() || "");
+						if (!bookingId) continue;
+						const bookingKey = bookingId.startsWith(`${studioKey}/`)
+							? bookingId.slice(studioKey.length + 1)
+							: bookingId;
+						if (Object.prototype.hasOwnProperty.call(existingBookings, bookingKey)) continue;
+						const reservedAtValue = slotSnapshot.child("reservedAt").val();
+						const reservedAt = Number(reservedAtValue);
+						if (Number.isFinite(reservedAt) && Date.now() - reservedAt < 30000) continue;
+						const normalizedBookingId = bookingId.startsWith(`${studioKey}/`)
+							? bookingId
+							: `${studioKey}/${bookingKey}`;
+						orphanBookingIds.add(normalizedBookingId);
+						const slotRef = ref(database, `bookingSlots/${studioKey}/${dateSnapshot.key}/${slotSnapshot.key}`);
+						try {
+							const result = await runTransaction(slotRef, (current) => {
+								if (String(current?.bookingId || "") !== bookingId) return;
+								const currentReservedAt = Number(current?.reservedAt);
+								if (Number.isFinite(currentReservedAt) && Date.now() - currentReservedAt < 30000) return;
+								return null;
+							});
+							if (result.committed) cleanedCount += 1;
+							else {
+								const remaining = await get(slotRef);
+								const remainingBookingId = String(remaining.child("bookingId").val() || "");
+								if (remainingBookingId === bookingId) {
+									await remove(slotRef);
+									const confirmedRemoval = await get(slotRef);
+									if (confirmedRemoval.exists()) failures.push(`${studioKey}/${dateSnapshot.key}/${slotSnapshot.key}`);
+									else cleanedCount += 1;
+								}
+							}
+						} catch (error) {
+							failures.push(`${studioKey}/${dateSnapshot.key}/${slotSnapshot.key}: ${error.message || "Firebase write failed"}`);
+						}
+					}
+				}
+			}
+			let sheetSyncError = "";
+			if (orphanBookingIds.size > 0) {
+				try {
+					await syncBookingsWithSheet("deleteMany", { bookingIds: [...orphanBookingIds] });
+				} catch (error) {
+					sheetSyncError = ` Google Sheet cleanup failed: ${error.message}`;
+					console.error("Orphan booking Google Sheet cleanup failed:", error);
+				}
+			}
+			if (failures.length > 0) {
+				databaseStatus.textContent = `Cleaned ${cleanedCount} orphan slot(s); ${failures.length} still need Firebase Rules access.${sheetSyncError}`;
+				databaseStatus.classList.add("error");
+				console.error("Orphan booking slot cleanup failures:", failures);
+			} else if (cleanedCount > 0) {
+				databaseStatus.textContent = `Cleaned ${cleanedCount} old booking slot reservation(s) and synced orphan booking deletions.${sheetSyncError}`;
+				databaseStatus.classList.toggle("error", Boolean(sheetSyncError));
+			} else if (sheetSyncError) {
+				databaseStatus.textContent = sheetSyncError.trim();
+				databaseStatus.classList.add("error");
+			}
+		}
+
+		async function flushSheetSyncQueue() {
+			if (flushingSheetSyncQueue || !currentUser) return;
+			flushingSheetSyncQueue = true;
+			const status = document.querySelector("#google-sheet-status");
+			try {
+				let pendingSyncs = JSON.parse(localStorage.getItem("studioBookingSheetSyncQueue") || "[]");
+				if (!Array.isArray(pendingSyncs)) throw new Error("The pending Google Sheet sync queue has an invalid format.");
+				while (pendingSyncs.length > 0) {
+					const nextSync = pendingSyncs[0];
+					await syncBookingsWithSheet(nextSync.operation, nextSync.payload);
+					pendingSyncs = pendingSyncs.slice(1);
+					localStorage.setItem("studioBookingSheetSyncQueue", JSON.stringify(pendingSyncs));
+				}
+				status.textContent = "Google Sheet connected and all pending bookings are synchronized.";
+				status.classList.remove("error");
+			} catch (error) {
+				status.textContent = `Google Sheet sync is pending. It will retry when the dashboard opens: ${error.message}`;
+				status.classList.add("error");
+				console.error("Pending Google Sheet sync failed:", error);
+			} finally {
+				flushingSheetSyncQueue = false;
+			}
+		}
+
+		function setStudioManagementStatus(text, isError = false) {
+			const status = document.querySelector("#studio-management-status");
+			status.textContent = text;
+			status.classList.toggle("error", isError);
+		}
+
+		function renderStudioManagement() {
+			const list = document.querySelector("#studio-management-list");
+			list.replaceChildren();
+			for (const studio of studios) {
+				const item = document.createElement("li");
+				item.className = "studio-management-item";
+				const name = document.createElement("span");
+				name.className = "studio-management-name";
+				name.textContent = studio.name;
+				const actions = document.createElement("div");
+				actions.className = "studio-management-actions";
+				const editButton = document.createElement("button");
+				editButton.type = "button";
+				editButton.textContent = "Edit";
+				editButton.addEventListener("click", async () => {
+					const editedName = window.prompt("Edit studio name:", studio.name);
+					if (editedName === null) return;
+					await updateManagedStudio(studio.key, editedName, "edit");
+				});
+				const deleteButton = document.createElement("button");
+				deleteButton.className = "studio-delete-button";
+				deleteButton.type = "button";
+				deleteButton.textContent = "Delete";
+				deleteButton.addEventListener("click", async () => {
+					const confirmed = window.confirm(`Delete ${studio.name} from the studio list? Existing bookings will remain stored.`);
+					if (confirmed) await updateManagedStudio(studio.key, studio.name, "delete");
+				});
+				actions.append(editButton, deleteButton);
+				item.append(name, actions);
+				list.append(item);
+			}
+		}
+
+		async function updateManagedStudio(key, name, action) {
+			if (currentRole !== "Admin") {
+				setStudioManagementStatus("Only Admin can manage studios.", true);
+				return;
+			}
+			const normalizedName = name.trim().replace(/\s+/g, " ");
+			if (action !== "delete" && !normalizedName) {
+				setStudioManagementStatus("Enter a studio name first.", true);
+				return;
+			}
+			const proposedKey = action === "add"
+				? `${normalizedName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "studio"}-${Date.now().toString(36)}`
+				: key;
+			try {
+				const result = await runTransaction(studiosRef, (existing) => {
+					const hasInitializedList = existing?.initialized === true
+						&& existing.entries
+						&& typeof existing.entries === "object";
+					const entries = hasInitializedList
+						? { ...existing.entries }
+						: Object.fromEntries(initialStudios.map((studio) => [studio.key, studio]));
+					if (action === "add") {
+						if (Object.values(entries).some((studio) => studio?.name?.toLocaleLowerCase() === normalizedName.toLocaleLowerCase())) return;
+						if (entries[proposedKey]) return;
+						entries[proposedKey] = { key: proposedKey, name: normalizedName };
+					} else if (action === "edit") {
+						if (!entries[key]) return;
+						if (Object.values(entries).some((studio) =>
+							studio?.key !== key && studio?.name?.toLocaleLowerCase() === normalizedName.toLocaleLowerCase()
+						)) return;
+						entries[key] = { key, name: normalizedName };
+					} else {
+						if (!entries[key]) return;
+						delete entries[key];
+					}
+					return { initialized: true, entries };
+				});
+				if (!result.committed) {
+					setStudioManagementStatus(
+						action === "add" || action === "edit"
+							? "A studio with that name already exists or the list changed. Refresh and try again."
+							: "That studio is no longer in the list.",
+						true
+					);
+					return;
+				}
+				setStudioManagementStatus(action === "delete" ? `${name} deleted. Existing bookings were kept.` : `${normalizedName} ${action === "add" ? "added" : "updated"}.`);
+				if (action === "add") document.querySelector("#new-studio-name").value = "";
+			} catch (error) {
+				setStudioManagementStatus("Could not update studios. Check Firebase Database Rules.", true);
+				console.error(`Could not ${action} studio:`, error);
+			}
+		}
+
+		function applyManagedStudios(nextStudios) {
+			for (const stop of stopListening.values()) stop();
+			stopListening.clear();
+			studios = nextStudios;
+			for (const key of bookingsByStudio.keys()) {
+				if (!studios.some((studio) => studio.key === key)) bookingsByStudio.delete(key);
+			}
+			for (const studio of studios) {
+				if (!bookingsByStudio.has(studio.key)) bookingsByStudio.set(studio.key, []);
+			}
+			renderStudioSections();
+			renderStudioManagement();
+			listenForBookings();
+		}
+
+		function readDateRange(startId, endId, result) {
+			const startDate = document.querySelector(`#${startId}`).value;
+			const endDate = document.querySelector(`#${endId}`).value;
+			result.textContent = "";
+			result.classList.remove("error");
+			if (!startDate || !endDate) {
+				result.textContent = "Choose both a start date and an end date.";
+				result.classList.add("error");
+				return null;
+			}
+			if (startDate > endDate) {
+				result.textContent = "Start date must be on or before the end date.";
+				result.classList.add("error");
+				return null;
+			}
+			return { startDate, endDate };
+		}
+
+		async function getBookingsInRange(startDate, endDate) {
+			const results = await Promise.all(studios.map(async (studio) => {
+				const bookingsQuery = query(
+					ref(database, `bookings/${studio.key}`),
+					orderByChild("date"),
+					startAt(startDate),
+					endAt(endDate)
+				);
+				const snapshot = await get(bookingsQuery);
+				const bookings = [];
+				snapshot.forEach((child) => {
+					if (child.key) {
+						bookings.push({
+							studio,
+							key: child.key,
+							date: child.child("date").val(),
+							data: child.val()
+						});
+					}
+				});
+				return bookings;
+			}));
+			return results.flat();
+		}
+
+		function toCsvCell(value) {
+			const text = value === null || value === undefined ? "" : String(value);
+			const safeText = /^[\t\r ]*[=+\-@]/.test(text) ? `'${text}` : text;
+			return `"${safeText.replaceAll('"', '""')}"`;
+		}
+
+		document.querySelector("#delete-range-button").addEventListener("click", async (event) => {
+			const button = event.currentTarget;
+			const result = document.querySelector("#delete-result");
+			if (!currentUser || currentRole !== "Admin") {
+				result.textContent = "Only the Admin account can delete old bookings.";
+				result.classList.add("error");
+				return;
+			}
+
+			const range = readDateRange("delete-start-date", "delete-end-date", result);
+			if (!range) return;
+
+			button.disabled = true;
+			result.textContent = "Finding bookings in the selected date range…";
+			try {
+				const bookings = await getBookingsInRange(range.startDate, range.endDate);
+				if (bookings.length === 0) {
+					result.textContent = "No bookings were found in that date range.";
+					return;
+				}
+
+				const confirmed = window.confirm(
+					`Permanently delete ${bookings.length} booking(s) from ${range.startDate} through ${range.endDate}? This cannot be undone.`
+				);
+				if (!confirmed) {
+					result.textContent = "Deletion cancelled.";
+					return;
+				}
+
+				const outcomes = await Promise.allSettled(bookings.map(async (booking) => ({
+					booking,
+					slotCleanupWarning: await deleteBookingAndReleaseSlots(booking.studio.key, booking.key, booking)
+				})));
+				const deletedCount = outcomes.filter((outcome) => outcome.status === "fulfilled").length;
+				const failedCount = outcomes.length - deletedCount;
+				const deletedBookings = outcomes
+					.filter((outcome) => outcome.status === "fulfilled")
+					.map((outcome) => outcome.value.booking);
+				const cleanupWarnings = outcomes
+					.filter((outcome) => outcome.status === "fulfilled" && outcome.value.slotCleanupWarning)
+					.map((outcome) => outcome.value.slotCleanupWarning);
+				let sheetSyncMessage = "";
+				if (deletedCount > 0) {
+					const bookingIds = deletedBookings.map((booking) => `${booking.studio.key}/${booking.key}`);
+					removePendingBookingUpserts(bookingIds);
+					try {
+						await syncBookingsWithSheet("deleteMany", {
+							bookingIds,
+							bookings: deletedBookings.map((booking) => ({
+								...booking.data,
+								bookingId: `${booking.studio.key}/${booking.key}`,
+								studio: booking.studio.name
+							}))
+						});
+						sheetSyncMessage = " Google Sheet synced.";
+					} catch (error) {
+						sheetSyncMessage = ` Google Sheet sync failed: ${error.message}`;
+						console.error("Date-range Google Sheet sync failed:", error);
+					}
+				}
+				if (failedCount > 0) {
+					result.textContent = `${deletedCount} booking(s) deleted; ${failedCount} could not be deleted.${sheetSyncMessage}`;
+					result.classList.add("error");
+					console.error("Some Firebase booking deletions failed:", outcomes.filter((outcome) => outcome.status === "rejected"));
+				} else {
+					const cleanupMessage = cleanupWarnings.length
+						? ` Slot cleanup needs attention: ${cleanupWarnings.join(" ")}`
+						: "";
+					result.textContent = `${deletedCount} booking(s) deleted.${sheetSyncMessage}${cleanupMessage}`;
+					result.classList.toggle("error", Boolean(sheetSyncMessage || cleanupMessage));
+				}
+			} catch (error) {
+				result.textContent = "Could not find or delete bookings. Check Firebase Realtime Database rules.";
+				result.classList.add("error");
+				console.error("Firebase date-range deletion failed:", error);
+			} finally {
+				button.disabled = false;
+			}
+		});
+
+		document.querySelector("#export-range-button").addEventListener("click", async (event) => {
+			const button = event.currentTarget;
+			const result = document.querySelector("#export-result");
+			if (!currentUser) {
+				result.textContent = "Sign in before exporting bookings.";
+				result.classList.add("error");
+				return;
+			}
+
+			const range = readDateRange("export-start-date", "export-end-date", result);
+			if (!range) return;
+
+			button.disabled = true;
+			result.textContent = "Preparing CSV export…";
+			try {
+				const bookings = await getBookingsInRange(range.startDate, range.endDate);
+				bookings.sort((first, second) =>
+					String(first.date).localeCompare(String(second.date))
+					|| String(first.data.startTime ?? first.data.time ?? "").localeCompare(String(second.data.startTime ?? second.data.time ?? ""))
+					|| first.studio.name.localeCompare(second.studio.name)
+				);
+				const rows = [
+					["Studio", "Name", "Date", "Start Time", "End Time", "Purpose", "Subject", "User ID"],
+					...bookings.map(({ studio, data }) => [
+						studio.name,
+						data.name,
+						data.date,
+						data.startTime ?? data.time,
+						data.endTime,
+						formatBookingPurpose(data),
+						data.subject,
+						data.userId
+					])
+				];
+				const csv = `\uFEFF${rows.map((row) => row.map(toCsvCell).join(",")).join("\r\n")}`;
+				const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
+				const url = URL.createObjectURL(file);
+				const link = document.createElement("a");
+				link.href = url;
+				link.download = `studio-bookings-${range.startDate}-to-${range.endDate}.csv`;
+				document.body.append(link);
+				link.click();
+				link.remove();
+				window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+				result.textContent = `${bookings.length} booking(s) exported.`;
+			} catch (error) {
+				result.textContent = "Could not export bookings. Check Firebase Realtime Database rules.";
+				result.classList.add("error");
+				console.error("Firebase booking CSV export failed:", error);
+			} finally {
+				button.disabled = false;
+			}
+		});
+
+		function toDateKey(date) {
+			const year = date.getFullYear();
+			const month = String(date.getMonth() + 1).padStart(2, "0");
+			const day = String(date.getDate()).padStart(2, "0");
+			return `${year}-${month}-${day}`;
+		}
+
+		function formatBookingPurpose(booking) {
+			const purpose = booking.purpose === "YouTube" && booking.youtubeType
+				? `YouTube ${booking.youtubeType}`
+				: booking.purpose;
+			const channels = Array.isArray(booking.youtubeChannels)
+				? booking.youtubeChannels.filter((channel) => typeof channel === "string").join(", ")
+				: "";
+			const batchNames = Array.isArray(booking.batchNames)
+				? booking.batchNames.filter((batch) => typeof batch === "string").join(", ")
+				: typeof booking.batchName === "string" ? booking.batchName : "";
+			const details = [channels, batchNames]
+				.filter(Boolean);
+			return details.length ? `${purpose} - ${details.join(" - ")}` : purpose;
+		}
+
+		function formatBookingTime(value) {
+			const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ""));
+			if (!match) return String(value || "");
+			const hour = Number(match[1]);
+			const minute = Number(match[2]);
+			if (hour > 23 || minute > 59) return String(value);
+			const suffix = hour < 12 ? "AM" : "PM";
+			return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${suffix}`;
+		}
+
+		function normalizeBookingTime(value) {
+			const time = String(value || "").trim();
+			const twentyFourHour = /^(\d{1,2}):(\d{2})$/.exec(time);
+			if (twentyFourHour) {
+				const hour = Number(twentyFourHour[1]);
+				const minute = Number(twentyFourHour[2]);
+				if (hour <= 23 && minute <= 59) {
+					return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+				}
+			}
+			const twelveHour = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(time);
+			if (!twelveHour) return "";
+			let hour = Number(twelveHour[1]);
+			const minute = Number(twelveHour[2]);
+			if (hour < 1 || hour > 12 || minute > 59) return "";
+			if (twelveHour[3].toUpperCase() === "AM") hour %= 12;
+			else hour = hour % 12 + 12;
+			return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+		}
+
+		function updateDateLabel() {
+			const dateLabel = document.querySelector("#date-label");
+			dateLabel.dateTime = toDateKey(currentDate);
+			dateLabel.textContent = currentDate.toLocaleDateString("en-US", {
+				weekday: "short",
+				month: "short",
+				day: "2-digit",
+				year: "numeric"
+			});
+		}
+
+		function renderStudioSections() {
+			schedulesContainer.replaceChildren();
+			for (const studio of studios) {
+				const section = document.createElement("section");
+				section.className = "studio-section";
+
+				const title = document.createElement("h2");
+				title.textContent = `${studio.name} Bookings`;
+				section.append(title);
+
+				const tableWrap = document.createElement("div");
+				tableWrap.className = "table-wrap";
+				const table = document.createElement("table");
+				const head = document.createElement("thead");
+				const headerRow = document.createElement("tr");
+				for (const label of ["Name", "Date", "Time", "Purpose", "Subject", "User ID", "Actions"]) {
+					const cell = document.createElement("th");
+					cell.scope = "col";
+					cell.textContent = label;
+					headerRow.append(cell);
+				}
+				head.append(headerRow);
+
+				const body = document.createElement("tbody");
+				body.id = `bookings-${studio.key}`;
+				table.append(head, body);
+				tableWrap.append(table);
+
+				const bookButton = document.createElement("button");
+				bookButton.className = "book-button";
+				bookButton.type = "button";
+				bookButton.textContent = `Book ${studio.name}`;
+				bookButton.addEventListener("click", () => {
+					window.location.assign(`booking.html?studio=${encodeURIComponent(studio.key)}&date=${encodeURIComponent(toDateKey(currentDate))}`);
+				});
+
+				section.append(tableWrap, bookButton);
+				schedulesContainer.append(section);
+				renderBookings(studio);
+			}
+		}
+
+		function renderBookings(studio) {
+			const body = document.querySelector(`#bookings-${studio.key}`);
+			if (!body) return;
+			body.replaceChildren();
+
+			const bookings = bookingsByStudio.get(studio.key) ?? [];
+			const dateBookings = bookings.filter((booking) => booking.date === toDateKey(currentDate));
+			if (dateBookings.length === 0) {
+				const row = document.createElement("tr");
+				row.className = "empty-row";
+				const cell = document.createElement("td");
+				cell.colSpan = 7;
+				cell.textContent = failedStudios.has(studio.key)
+					? "Bookings could not be loaded. Check database access rules."
+					: "No bookings for this date.";
+				row.append(cell);
+				body.append(row);
+				return;
+			}
+
+			for (const booking of dateBookings) {
+				const row = document.createElement("tr");
+				row.className = "booking-row";
+				for (const value of [
+					booking.name,
+					booking.date,
+					booking.startTime && booking.endTime
+						? `${formatBookingTime(booking.startTime)} - ${formatBookingTime(booking.endTime)}`
+						: formatBookingTime(booking.time),
+					formatBookingPurpose(booking),
+					booking.subject,
+					booking.userId
+				]) {
+					const cell = document.createElement("td");
+					cell.textContent = value || "—";
+					row.append(cell);
+				}
+				const actions = document.createElement("td");
+				if (currentRole === "Admin") {
+					const editButton = document.createElement("button");
+					editButton.type = "button";
+					editButton.textContent = "Edit";
+					editButton.addEventListener("click", () => editBooking(studio, booking));
+					const deleteButton = document.createElement("button");
+					deleteButton.className = "studio-delete-button";
+					deleteButton.type = "button";
+					deleteButton.textContent = "Delete";
+					deleteButton.addEventListener("click", () => deleteBooking(studio, booking));
+					actions.append(editButton, deleteButton);
+				} else {
+					actions.textContent = "—";
+				}
+				row.append(actions);
+				body.append(row);
+			}
+		}
+
+		const editBookingDialog = document.querySelector("#edit-booking-dialog");
+		const editBookingForm = document.querySelector("#edit-booking-form");
+		const editPurposeSelect = document.querySelector("#edit-booking-purpose");
+		const editStartTimeSelect = document.querySelector("#edit-booking-start-time");
+		const editEndTimeSelect = document.querySelector("#edit-booking-end-time");
+
+		function populateEditTimeOptions(select, endMinute) {
+			select.replaceChildren(new Option("Select Time", ""));
+			for (let minutes = 8 * 60; minutes <= endMinute; minutes += 30) {
+				const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+				const remainder = String(minutes % 60).padStart(2, "0");
+				const value = `${hours}:${remainder}`;
+				const label = new Date(2000, 0, 1, Number(hours), Number(remainder))
+					.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+				select.add(new Option(label, value));
+			}
+		}
+
+		populateEditTimeOptions(editStartTimeSelect, 22 * 60 + 30);
+		populateEditTimeOptions(editEndTimeSelect, 23 * 60);
+
+		function updateEditBookingFields() {
+			const purpose = editPurposeSelect.value;
+			const showChannels = purpose === "YouTube Live";
+			const showBatches = purpose === "Application Live";
+			document.querySelector("#edit-booking-channels-field").hidden = !showChannels;
+			document.querySelector("#edit-booking-channels-help").hidden = !showChannels;
+			document.querySelector("#edit-booking-batches-field").hidden = !showBatches;
+			document.querySelector("#edit-booking-batches-help").hidden = !showBatches;
+		}
+
+		editPurposeSelect.addEventListener("change", updateEditBookingFields);
+
+		async function editBooking(studio, booking) {
+			if (currentRole !== "Admin" || !booking.bookingKey) return;
+			document.querySelector("#edit-booking-name").value = booking.name || "";
+			document.querySelector("#edit-booking-date").value = booking.date || "";
+			const initialStartTime = normalizeBookingTime(booking.startTime || booking.time);
+			const initialEndTime = normalizeBookingTime(booking.endTime);
+			for (const [select, value] of [[editStartTimeSelect, initialStartTime], [editEndTimeSelect, initialEndTime]]) {
+				if (value && !Array.from(select.options).some((option) => option.value === value)) {
+					select.add(new Option(formatBookingTime(value), value));
+				}
+				select.value = value;
+			}
+			const initialPurpose = booking.purpose === "YouTube" && booking.youtubeType
+				? `YouTube ${booking.youtubeType}`
+				: booking.purpose || "Planner";
+			editPurposeSelect.value = initialPurpose;
+			document.querySelector("#edit-booking-subject").value = booking.subject || "";
+			const existingYoutubeChannels = Array.isArray(booking.youtubeChannels) ? booking.youtubeChannels : [];
+			document.querySelector("#edit-booking-channels").value = existingYoutubeChannels.join(", ");
+			const existingBatchNames = Array.isArray(booking.batchNames)
+				? booking.batchNames
+				: typeof booking.batchName === "string" ? [booking.batchName] : [];
+			document.querySelector("#edit-booking-batches").value = existingBatchNames.join(", ");
+			updateEditBookingFields();
+			editBookingDialog.showModal();
+			await new Promise((resolve) => {
+				editBookingDialog.addEventListener("close", resolve, { once: true });
+			});
+			if (editBookingDialog.returnValue !== "save") return;
+
+			const formData = new FormData(editBookingForm);
+			const name = String(formData.get("name") || "").trim();
+			const date = String(formData.get("date") || "");
+			const startTime = String(formData.get("startTime") || "");
+			const endTime = String(formData.get("endTime") || "");
+			const purpose = String(formData.get("purpose") || "").trim();
+			const subject = String(formData.get("subject") || "").trim();
+			const youtubeChannels = purpose === "YouTube Live"
+				? String(formData.get("youtubeChannels") || "").split(",").map((channel) => channel.trim()).filter(Boolean)
+				: [];
+			const editedBatchNames = purpose === "Application Live"
+				? String(formData.get("batchNames") || "").split(",").map((batch) => batch.trim()).filter(Boolean)
+				: [];
+			if (purpose === "Application Live" && editedBatchNames.length === 0) {
+				databaseStatus.textContent = "Application Live needs at least one batch.";
+				databaseStatus.classList.add("error");
+				return;
+			}
+			if (purpose === "YouTube Live" && youtubeChannels.length === 0) {
+				databaseStatus.textContent = "YouTube Live needs at least one channel.";
+				databaseStatus.classList.add("error");
+				return;
+			}
+			if (!name.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(startTime)
+				|| !/^\d{2}:\d{2}$/.test(endTime) || endTime <= startTime || !purpose.trim() || !subject.trim()) {
+				databaseStatus.textContent = "Booking not updated. Check the name, date, time range, purpose, and subject.";
+				databaseStatus.classList.add("error");
+				return;
+			}
+			const batchNames = editedBatchNames;
+			const { bookingKey, ...bookingData } = booking;
+			const updatedBooking = {
+				...bookingData,
+				name: name.trim(),
+				date,
+				startTime,
+				endTime,
+				time: startTime,
+				purpose: purpose.trim(),
+				subject: subject.trim(),
+				youtubeChannels: youtubeChannels.length ? youtubeChannels : null,
+				batchNames: batchNames.length ? batchNames : null,
+				batchName: batchNames.length === 1 ? batchNames[0] : null,
+				youtubeType: purpose.startsWith("YouTube ") ? purpose.slice("YouTube ".length) : null
+			};
+			let newlyReservedSlots = [];
+			const bookingId = `${studio.key}/${booking.bookingKey}`;
+			const oldSlotKeys = bookingSlotKeys(booking.startTime || booking.time, booking.endTime);
+			let newSlotKeys;
+			let bookingUpdated = false;
+			try {
+				newSlotKeys = bookingSlotKeys(updatedBooking.startTime, updatedBooking.endTime);
+				newlyReservedSlots = await reserveBookingSlots(
+					studio.key,
+					updatedBooking,
+					bookingId,
+					booking.bookingKey
+				);
+				await update(ref(database, `bookings/${studio.key}/${booking.bookingKey}`), updatedBooking);
+				bookingUpdated = true;
+				const releasedSlots = oldSlotKeys.filter((slotKey) => !newSlotKeys.includes(slotKey));
+				await releaseBookingSlots(studio.key, booking.date, releasedSlots, bookingId);
+				try {
+					await syncBookingsWithSheet("upsert", {
+						booking: {
+							...updatedBooking,
+							bookingId: `${studio.key}/${booking.bookingKey}`,
+							studio: studio.name
+						}
+					});
+					databaseStatus.textContent = "Booking updated in Firebase and Google Sheet.";
+					databaseStatus.classList.remove("error");
+				} catch (error) {
+					databaseStatus.textContent = `Booking updated in Firebase, but Google Sheet sync failed: ${error.message}`;
+					databaseStatus.classList.add("error");
+					console.error("Edited booking Google Sheet sync failed:", error);
+				}
+			} catch (error) {
+				if (!bookingUpdated && newlyReservedSlots.length > 0) {
+					try {
+						await releaseBookingSlots(studio.key, date, newlyReservedSlots, bookingId);
+					} catch (releaseError) {
+						console.error("Could not release new slot reservations after edit failure:", releaseError);
+					}
+				}
+				databaseStatus.textContent = `Could not update booking: ${error.message || "Check Firebase Realtime Database Rules."}`;
+				databaseStatus.classList.add("error");
+				console.error("Firebase booking update failed:", error);
+			}
+		}
+
+		async function deleteBooking(studio, booking) {
+			if (currentRole !== "Admin" || !booking.bookingKey) return;
+			if (!window.confirm(`Permanently delete ${booking.name}'s booking at ${studio.name}?`)) return;
+			try {
+				const slotCleanupWarning = await deleteBookingAndReleaseSlots(studio.key, booking.bookingKey, booking);
+				const bookingId = `${studio.key}/${booking.bookingKey}`;
+				removePendingBookingUpserts([bookingId]);
+				try {
+					await syncBookingsWithSheet("delete", {
+						bookingId,
+						booking: { ...booking, bookingId, studio: studio.name }
+					});
+					databaseStatus.textContent = slotCleanupWarning
+						? `Booking deleted from Firebase and Google Sheet. ${slotCleanupWarning}`
+						: "Booking deleted from Firebase and Google Sheet.";
+					databaseStatus.classList.toggle("error", Boolean(slotCleanupWarning));
+				} catch (error) {
+					databaseStatus.textContent = `Booking deleted from Firebase. Google Sheet sync failed: ${error.message}.${slotCleanupWarning ? ` ${slotCleanupWarning}` : ""}`;
+					databaseStatus.classList.add("error");
+					console.error("Deleted booking Google Sheet sync failed:", error);
+				}
+			} catch (error) {
+				databaseStatus.textContent = `Booking could not be deleted from Firebase: ${error.message || "Check Firebase Realtime Database rules."}`;
+				databaseStatus.classList.add("error");
+				console.error("Firebase booking deletion failed:", error);
+			}
+		}
+
+		function listenForBookings() {
+			for (const stop of stopListening.values()) stop();
+			stopListening.clear();
+
+			for (const studio of studios) {
+				const bookingsQuery = query(
+					ref(database, `bookings/${studio.key}`),
+					orderByChild("date"),
+					equalTo(toDateKey(currentDate))
+				);
+				const stop = onValue(bookingsQuery, (snapshot) => {
+					const bookings = [];
+					snapshot.forEach((child) => {
+						const booking = child.val();
+						if (booking && typeof booking === "object" && child.key) {
+							bookings.push({ ...booking, bookingKey: child.key });
+						}
+					});
+					bookingsByStudio.set(studio.key, bookings);
+					failedStudios.delete(studio.key);
+					databaseStatus.textContent = failedStudios.size
+						? "Some bookings could not be loaded. Check Firebase Realtime Database rules."
+						: "Connected to Firebase Realtime Database.";
+					databaseStatus.classList.toggle("error", failedStudios.size > 0);
+					renderBookings(studio);
+				}, (error) => {
+					failedStudios.add(studio.key);
+					databaseStatus.textContent = "Could not load bookings. Check Firebase Realtime Database rules.";
+					databaseStatus.classList.add("error");
+					console.error(`Could not load bookings for ${studio.name}:`, error);
+					renderBookings(studio);
+				});
+				stopListening.set(studio.key, stop);
+			}
+		}
+
+		function refreshDashboardDateIfNeeded() {
+			const today = new Date();
+			if (toDateKey(currentDate) !== toDateKey(today)) {
+				currentDate = today;
+				updateDateLabel();
+				renderStudioSections();
+				listenForBookings();
+			}
+		}
+
+		function scheduleDailyDateRefresh() {
+			const now = new Date();
+			const nextMidnight = new Date(now);
+			nextMidnight.setHours(24, 0, 0, 50);
+			window.setTimeout(() => {
+				refreshDashboardDateIfNeeded();
+				scheduleDailyDateRefresh();
+			}, nextMidnight.getTime() - now.getTime());
+		}
+
+		document.addEventListener("visibilitychange", () => {
+			if (document.visibilityState === "visible") refreshDashboardDateIfNeeded();
+		});
+
+		document.querySelector("#previous-day").addEventListener("click", () => {
+			currentDate.setDate(currentDate.getDate() - 1);
+			updateDateLabel();
+			listenForBookings();
+			renderStudioSections();
+		});
+
+		document.querySelector("#next-day").addEventListener("click", () => {
+			currentDate.setDate(currentDate.getDate() + 1);
+			updateDateLabel();
+			listenForBookings();
+			renderStudioSections();
+		});
+
+		document.querySelector("#add-studio-button").addEventListener("click", async () => {
+			await updateManagedStudio("", document.querySelector("#new-studio-name").value, "add");
+		});
+		document.querySelector("#new-studio-name").addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				document.querySelector("#add-studio-button").click();
+			}
+		});
+
+		setPersistence(auth, browserLocalPersistence).then(() => {
+			onAuthStateChanged(auth, async (user) => {
+				if (!user) {
+					window.location.replace("loginpage.html");
+					return;
+				}
+
+				const role = user.email ? rolesByEmail.get(user.email.toLowerCase()) : undefined;
+				if (!role) {
+					databaseStatus.textContent = "This account is not authorized to use this app.";
+					databaseStatus.classList.add("error");
+					try {
+						await signOut(auth);
+						window.location.replace("loginpage.html");
+					} catch (error) {
+						console.error("Could not sign out an unauthorized account:", error);
+					}
+					return;
+				}
+
+				currentUser = user;
+				currentRole = role;
+				document.querySelector("#welcome-heading").textContent = `Welcome, ${role}`;
+				document.querySelector("#admin-tools").hidden = role !== "Admin";
+				document.querySelector("#booking-admin-tools").hidden = role !== "Admin";
+				document.querySelector("#google-sheet-tools").hidden = role !== "Admin";
+				void flushSheetSyncQueue();
+				updateDateLabel();
+				renderStudioSections();
+				renderStudioManagement();
+				listenForBookings();
+				scheduleDailyDateRefresh();
+				onValue(studiosRef, (snapshot) => {
+					const list = snapshot.val();
+					if (list?.initialized === true) {
+						const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
+						const managedStudios = Object.values(entries)
+							.filter((studio) => studio && typeof studio.key === "string" && typeof studio.name === "string")
+							.map((studio) => ({ key: studio.key, name: studio.name }));
+						applyManagedStudios(managedStudios);
+					} else {
+						applyManagedStudios([...initialStudios]);
+					}
+					if (role === "Admin") {
+						void cleanupOrphanBookingSlots().catch((error) => {
+							databaseStatus.textContent = `Could not check old booking slots: ${error.message || "Firebase access failed."}`;
+							databaseStatus.classList.add("error");
+							console.error("Orphan booking slot cleanup failed:", error);
+						});
+					}
+				}, (error) => {
+					databaseStatus.textContent = "Could not load studio list. Check Firebase Realtime Database rules.";
+					databaseStatus.classList.add("error");
+					console.error("Firebase studio list load failed:", error);
+				});
+			}, (error) => {
+				databaseStatus.textContent = "Unable to verify your sign-in. Please sign in again.";
+				databaseStatus.classList.add("error");
+				console.error("Firebase authentication state failed:", error);
+			});
+		}, (error) => {
+			databaseStatus.textContent = "Unable to keep your sign-in session. Check your browser storage settings.";
+			databaseStatus.classList.add("error");
+			console.error("Firebase local session persistence failed:", error);
+		});
+
+		document.querySelector("#sign-out-button").addEventListener("click", async (event) => {
+			const button = event.currentTarget;
+			button.disabled = true;
+			try {
+				await signOut(auth);
+				window.location.replace("loginpage.html");
+			} catch (error) {
+				button.disabled = false;
+				databaseStatus.textContent = "Unable to sign out. Please try again.";
+				databaseStatus.classList.add("error");
+				console.error("Firebase sign-out failed:", error);
+			}
+		});
+	</script>
+</body>
+</html>
