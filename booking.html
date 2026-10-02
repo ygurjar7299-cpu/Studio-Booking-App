@@ -978,7 +978,11 @@
 						return;
 					});
 					if (!facultyResult.committed) {
-						throw new Error(`${booking.name} already has a booking in another studio at that time. Choose another time.`);
+						const ownerId = String(facultyResult.snapshot.child("bookingId").val() || "");
+						const ownerStudioKey = ownerId.includes("/") ? ownerId.slice(0, ownerId.indexOf("/")) : "";
+						const conflictingStudio = studioSequence.find((studio) => studio.key === ownerStudioKey)?.name
+							|| "another studio";
+						throw new Error(`${booking.name} already has a booking in ${conflictingStudio} at that time. Choose another time.`);
 					}
 					if (!facultyAlreadyOwned) reservation.faculty.push(slotKey);
 
