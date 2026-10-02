@@ -1469,8 +1469,9 @@
 		}
 
 		function parseEditableList(value) {
-			return String(value || "")
-				.split(/\r?\n|,/)
+			const lines = String(value || "").split(/\r?\n/);
+			const entries = lines.length === 1 ? lines[0].split(",") : lines;
+			return entries
 				.map((entry) => entry.trim().replace(/^\d+[.)]\s*/, "").trim())
 				.filter(Boolean);
 		}
