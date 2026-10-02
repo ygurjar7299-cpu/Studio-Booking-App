@@ -534,23 +534,60 @@
 		}
 
 		async function reserveBookingSlots(studioKey, booking, bookingId, excludedBookingKey = "") {
-			const bookingsSnapshot = await get(ref(database, `bookings/${studioKey}`));
 			const requestedStart = bookingTimeMinutes(booking.startTime);
 			const requestedEnd = bookingTimeMinutes(booking.endTime);
-			if (bookingsSnapshot.exists()) {
+			for (const studio of studios) {
+				const bookingsSnapshot = await get(query(
+					ref(database, `bookings/${studio.key}`),
+					orderByChild("date"),
+					equalTo(booking.date)
+				));
+				if (!bookingsSnapshot.exists()) continue;
 				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
-					if (!existing || key === excludedBookingKey || existing.date !== booking.date) return false;
+					if (!existing || `${studio.key}/${key}` === bookingId || (studio.key === studioKey && key === excludedBookingKey)
+						|| existing.date !== booking.date) return false;
 					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
 					const existingEnd = bookingTimeMinutes(existing.endTime);
 					return Number.isFinite(existingStart) && Number.isFinite(existingEnd)
 						&& requestedStart < existingEnd && existingStart < requestedEnd;
 				});
-				if (conflict) throw new Error("This studio already has a booking during that time. Choose another time.");
+				if (conflict) throw new Error("That time is already booked in a studio. Choose another time.");
 			}
 
-			const reservedKeys = [];
+			const reservation = { global: [], legacy: [] };
 			try {
 				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+					const globalSlotRef = ref(database, `globalBookingSlots/${booking.date}/${slotKey}`);
+					const globalPrevious = await get(globalSlotRef);
+					const globallyOwned = globalPrevious.child("bookingId").val() === bookingId;
+					if (globalPrevious.exists() && !globallyOwned) {
+						const ownerId = String(globalPrevious.child("bookingId").val() || "");
+						const separator = ownerId.indexOf("/");
+						const ownerStudio = separator >= 0 ? ownerId.slice(0, separator) : "";
+						const ownerKey = separator >= 0 ? ownerId.slice(separator + 1) : "";
+						const ownerExists = ownerStudio && ownerKey
+							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
+							: true;
+						const reservedAt = Number(globalPrevious.child("reservedAt").val());
+						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+						if (!ownerExists || reservationExpired) {
+							await runTransaction(globalSlotRef, (current) =>
+								current?.bookingId === ownerId ? null : undefined
+							);
+						}
+					}
+					const globalResult = await runTransaction(globalSlotRef, (current) => {
+						if (current === null) {
+							return { bookingId, userId: booking.userId, studioKey, reservedAt: Date.now() };
+						}
+						if (current.bookingId === bookingId) return current;
+						return;
+					});
+					if (!globalResult.committed) {
+						throw new Error("That time was just booked in another studio. Choose a different time.");
+					}
+					if (!globallyOwned) reservation.global.push(slotKey);
+
 					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
 					const previous = await get(slotRef);
 					const alreadyOwned = previous.child("bookingId").val() === bookingId;
@@ -576,18 +613,26 @@
 						return;
 					});
 					if (!result.committed) throw new Error("This studio time slot was just booked by someone else. Choose another time.");
-					if (!alreadyOwned) reservedKeys.push(slotKey);
+					if (!alreadyOwned) reservation.legacy.push(slotKey);
 				}
-				return reservedKeys;
+				return reservation;
 			} catch (error) {
-				await releaseBookingSlots(studioKey, booking.date, reservedKeys, bookingId);
+				await releaseBookingSlots(studioKey, booking.date, reservation, bookingId);
 				throw error;
 			}
 		}
 
-		async function releaseBookingSlots(studioKey, date, slotKeys, bookingId) {
-			for (const slotKey of slotKeys) {
+		async function releaseBookingSlots(studioKey, date, reservation, bookingId) {
+			const legacyKeys = Array.isArray(reservation) ? reservation : reservation.legacy;
+			const globalKeys = Array.isArray(reservation) ? [] : reservation.global;
+			for (const slotKey of legacyKeys) {
 				const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === bookingId ? null : undefined
+				);
+			}
+			for (const slotKey of globalKeys) {
+				const slotRef = ref(database, `globalBookingSlots/${date}/${slotKey}`);
 				await runTransaction(slotRef, (current) =>
 					current?.bookingId === bookingId ? null : undefined
 				);
@@ -631,6 +676,23 @@
 						if (remainingBookingId === bookingId || remainingBookingId === bookingKey) failedSlots.push(slotKey);
 					} catch (error) {
 						failedSlots.push(`${slotKey} (${error.message || "permission/network error"})`);
+					}
+				}
+				const globalSlotsSnapshot = await get(ref(database, `globalBookingSlots/${date}`));
+				const globalSlotKeys = [];
+				globalSlotsSnapshot.forEach((child) => {
+					if (String(child.child("bookingId").val() || "") === bookingId && child.key) {
+						globalSlotKeys.push(child.key);
+					}
+				});
+				for (const slotKey of globalSlotKeys) {
+					const slotRef = ref(database, `globalBookingSlots/${date}/${slotKey}`);
+					try {
+						await runTransaction(slotRef, (current) =>
+							current?.bookingId === bookingId ? null : undefined
+						);
+					} catch (error) {
+						failedSlots.push(`${slotKey} (shared slot: ${error.message || "permission/network error"})`);
 					}
 				}
 				return failedSlots.length
@@ -1308,7 +1370,7 @@
 				batchName: batchNames.length === 1 ? batchNames[0] : null,
 				youtubeType: purpose.startsWith("YouTube ") ? purpose.slice("YouTube ".length) : null
 			};
-			let newlyReservedSlots = [];
+			let newlyReservedSlots = { global: [], legacy: [] };
 			const bookingId = `${studio.key}/${booking.bookingKey}`;
 			const oldSlotKeys = bookingSlotKeys(booking.startTime || booking.time, booking.endTime);
 			let newSlotKeys;
@@ -1323,8 +1385,13 @@
 				);
 				await update(ref(database, `bookings/${studio.key}/${booking.bookingKey}`), updatedBooking);
 				bookingUpdated = true;
-				const releasedSlots = oldSlotKeys.filter((slotKey) => !newSlotKeys.includes(slotKey));
-				await releaseBookingSlots(studio.key, booking.date, releasedSlots, bookingId);
+				const releasedSlots = oldSlotKeys.filter((slotKey) =>
+					booking.date !== updatedBooking.date || !newSlotKeys.includes(slotKey)
+				);
+				await releaseBookingSlots(studio.key, booking.date, {
+					global: releasedSlots,
+					legacy: releasedSlots
+				}, bookingId);
 				try {
 					await syncBookingsWithSheet("upsert", {
 						booking: {
@@ -1341,7 +1408,7 @@
 					console.error("Edited booking Google Sheet sync failed:", error);
 				}
 			} catch (error) {
-				if (!bookingUpdated && newlyReservedSlots.length > 0) {
+				if (!bookingUpdated && (newlyReservedSlots.global.length > 0 || newlyReservedSlots.legacy.length > 0)) {
 					try {
 						await releaseBookingSlots(studio.key, date, newlyReservedSlots, bookingId);
 					} catch (releaseError) {

@@ -456,7 +456,7 @@
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 		import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-		import { get, getDatabase, onValue, push, ref, runTransaction, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+		import { equalTo, get, getDatabase, onValue, orderByChild, push, query, ref, runTransaction, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
 		const firebaseConfig = {
 			apiKey: "AIzaSyA2sDPaG8p8yXYXDDoF8U6cQDIZ5D5cfnk",
@@ -613,6 +613,14 @@
 		let currentRole = null;
 		let unsyncedBooking = null;
 		let navigatingAfterBooking = false;
+		let availabilityStops = [];
+		let availabilityDate = "";
+		let availabilityGeneration = 0;
+		let availabilityReady = false;
+		let availabilityError = false;
+		const bookedSlotKeys = new Set();
+		const availabilitySlotsBySource = new Map();
+		const loadedAvailabilitySources = new Set();
 		const selectedYoutubeChannels = new Set();
 		if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
 			document.querySelector(".header-button").href = `dashboard.html?date=${encodeURIComponent(selectedDate)}`;
@@ -651,6 +659,7 @@
 			}
 
 			dateSelect.value = validDates.includes(preferredDate) ? preferredDate : validDates[0];
+			if (availabilityDate && availabilityDate !== dateSelect.value) listenForBookingAvailability();
 		}
 
 		function scheduleDateRefresh() {
@@ -768,24 +777,222 @@
 			return keys;
 		}
 
+		function renderBookingTimeAvailability() {
+			const startSelect = document.querySelector("#start-time");
+			const endSelect = document.querySelector("#end-time");
+			const selectedStart = startSelect.value;
+			for (const option of startSelect.options) {
+				const slotKey = option.value ? bookingSlotKeys(option.value, incrementTime(option.value, 30))[0] : "";
+				const isBooked = Boolean(slotKey && bookedSlotKeys.has(slotKey));
+				option.disabled = Boolean(option.value && (!availabilityReady || isBooked));
+				option.textContent = option.value
+					? `${formatTimeLabel(option.value)}${isBooked ? " (Booked)" : ""}`
+					: "Select Start Time";
+			}
+			const selectedStartOption = Array.from(startSelect.options).find((option) => option.value === selectedStart);
+			if (selectedStart && selectedStartOption?.disabled) {
+				startSelect.value = "";
+			}
+			const effectiveStart = startSelect.value;
+			for (const option of endSelect.options) {
+				let rangeBooked = false;
+				if (option.value && effectiveStart && option.value > effectiveStart) {
+					rangeBooked = bookingSlotKeys(effectiveStart, option.value).some((slotKey) => bookedSlotKeys.has(slotKey));
+				}
+				const invalidRange = Boolean(option.value && effectiveStart && option.value <= effectiveStart);
+				option.disabled = !availabilityReady || invalidRange || rangeBooked;
+				option.textContent = option.value
+					? `${formatTimeLabel(option.value)}${rangeBooked ? " (Booked)" : ""}`
+					: "Select End Time";
+			}
+			startSelect.disabled = !availabilityReady;
+			endSelect.disabled = !availabilityReady || !effectiveStart;
+			if (!effectiveStart || endSelect.selectedOptions[0]?.disabled) endSelect.value = "";
+		}
+
+		function incrementTime(value, minutesToAdd) {
+			const total = bookingTimeMinutes(value) + minutesToAdd;
+			return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+		}
+
+		function formatTimeLabel(value) {
+			const [hours, minutes] = value.split(":").map(Number);
+			return new Date(2000, 0, 1, hours, minutes)
+				.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+		}
+
+		function markAvailabilityLoaded(source) {
+			loadedAvailabilitySources.add(source);
+			const expected = studios.size + 1;
+			if (loadedAvailabilitySources.size >= expected && !availabilityError) {
+				availabilityReady = true;
+				setMessage("");
+			}
+			renderBookingTimeAvailability();
+		}
+
+		function updateAvailabilitySlots(source, slots) {
+			availabilitySlotsBySource.set(source, slots);
+			bookedSlotKeys.clear();
+			for (const sourceSlots of availabilitySlotsBySource.values()) {
+				for (const slotKey of sourceSlots) bookedSlotKeys.add(slotKey);
+			}
+			markAvailabilityLoaded(source);
+		}
+
+		function listenForBookingAvailability() {
+			if (!currentUser) return;
+			for (const stop of availabilityStops) stop();
+			availabilityStops = [];
+			const generation = ++availabilityGeneration;
+			availabilityDate = document.querySelector("#booking-date").value;
+			bookedSlotKeys.clear();
+			availabilitySlotsBySource.clear();
+			loadedAvailabilitySources.clear();
+			availabilityError = false;
+			availabilityReady = false;
+			renderBookingTimeAvailability();
+			setMessage("Checking availability across all studios…");
+
+			const date = availabilityDate;
+			const globalSlotsRef = ref(database, `globalBookingSlots/${date}`);
+			availabilityStops.push(onValue(globalSlotsRef, async (snapshot) => {
+				if (generation !== availabilityGeneration) return;
+				const slots = new Set();
+				const checks = [];
+				snapshot.forEach((slot) => {
+					const bookingId = String(slot.child("bookingId").val() || "");
+					if (!slot.key || !bookingId) return;
+					const reservedAt = Number(slot.child("reservedAt").val());
+					const stale = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+					if (!stale) {
+						slots.add(slot.key);
+						return;
+					}
+					const separator = bookingId.indexOf("/");
+					const ownerStudio = separator >= 0 ? bookingId.slice(0, separator) : "";
+					const ownerKey = separator >= 0 ? bookingId.slice(separator + 1) : "";
+					checks.push((async () => {
+						const ownerExists = ownerStudio && ownerKey
+							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
+							: true;
+						if (ownerExists) {
+							slots.add(slot.key);
+							return;
+						}
+						const slotRef = ref(database, `globalBookingSlots/${date}/${slot.key}`);
+						await runTransaction(slotRef, (current) =>
+							current?.bookingId === bookingId ? null : undefined
+						);
+					})());
+				});
+				try {
+					await Promise.all(checks);
+				} catch (error) {
+					if (generation !== availabilityGeneration) return;
+					availabilityError = true;
+					setMessage("Could not verify an existing slot reservation. Booking is disabled until it can be checked.", "error");
+					console.error("Could not verify a shared slot owner:", error);
+				}
+				if (generation !== availabilityGeneration) return;
+				updateAvailabilitySlots("global", slots);
+			}, (error) => {
+				if (generation !== availabilityGeneration) return;
+				availabilityError = true;
+				setMessage("Could not check shared booking availability. Try again after checking Firebase rules.", "error");
+				console.error("Could not read global booking slots:", error);
+				renderBookingTimeAvailability();
+			}));
+			for (const studioKey of studios.keys()) {
+				const bookingsQuery = query(
+					ref(database, `bookings/${studioKey}`),
+					orderByChild("date"),
+					equalTo(date)
+				);
+				availabilityStops.push(onValue(bookingsQuery, (snapshot) => {
+					if (generation !== availabilityGeneration) return;
+					const slots = new Set();
+					snapshot.forEach((child) => {
+						const booking = child.val();
+						if (!booking || typeof booking !== "object") return;
+						const startTime = booking.startTime || booking.time;
+						const endTime = booking.endTime;
+						if (!startTime || !endTime) return;
+						try {
+							for (const slotKey of bookingSlotKeys(startTime, endTime)) slots.add(slotKey);
+						} catch (error) {
+							console.warn(`Skipping invalid booking time while checking ${studioKey}:`, error);
+						}
+					});
+					updateAvailabilitySlots(`studio:${studioKey}`, slots);
+				}, (error) => {
+					if (generation !== availabilityGeneration) return;
+					availabilityError = true;
+					setMessage("Could not check all studio bookings. Booking is disabled until availability can be verified.", "error");
+					console.error(`Could not read bookings for ${studioKey}:`, error);
+					renderBookingTimeAvailability();
+				}));
+			}
+		}
+
 		async function reserveBookingSlots(booking, bookingId, excludedBookingId = "") {
-			const bookingsSnapshot = await get(ref(database, `bookings/${studioKey}`));
 			const requestedStart = bookingTimeMinutes(booking.startTime);
 			const requestedEnd = bookingTimeMinutes(booking.endTime);
-			if (bookingsSnapshot.exists()) {
+			if (!availabilityReady || availabilityDate !== booking.date) {
+				throw new Error("Shared availability is still loading. Wait a moment and try again.");
+			}
+
+			for (const otherStudioKey of studios.keys()) {
+				const bookingsSnapshot = await get(query(
+					ref(database, `bookings/${otherStudioKey}`),
+					orderByChild("date"),
+					equalTo(booking.date)
+				));
+				if (!bookingsSnapshot.exists()) continue;
 				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
-					if (!existing || key === excludedBookingId || existing.date !== booking.date) return false;
+					if (!existing || `${otherStudioKey}/${key}` === excludedBookingId || existing.date !== booking.date) return false;
 					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
 					const existingEnd = bookingTimeMinutes(existing.endTime);
 					return Number.isFinite(existingStart) && Number.isFinite(existingEnd)
 						&& requestedStart < existingEnd && existingStart < requestedEnd;
 				});
-				if (conflict) throw new Error("This studio already has a booking during that time. Choose another time.");
+				if (conflict) throw new Error("That time is already booked in a studio. Choose another time.");
 			}
 
-			const reservedKeys = [];
+			const reservation = { global: [], legacy: [] };
 			try {
 				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+					const globalSlotRef = ref(database, `globalBookingSlots/${booking.date}/${slotKey}`);
+					const globalPrevious = await get(globalSlotRef);
+					const globallyOwned = globalPrevious.child("bookingId").val() === bookingId;
+					if (globalPrevious.exists() && !globallyOwned) {
+						const ownerId = String(globalPrevious.child("bookingId").val() || "");
+						const separator = ownerId.indexOf("/");
+						const ownerStudio = separator >= 0 ? ownerId.slice(0, separator) : "";
+						const ownerKey = separator >= 0 ? ownerId.slice(separator + 1) : "";
+						const ownerExists = ownerStudio && ownerKey
+							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
+							: true;
+						const reservedAt = Number(globalPrevious.child("reservedAt").val());
+						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+						if (!ownerExists || reservationExpired) {
+							await runTransaction(globalSlotRef, (current) =>
+								current?.bookingId === ownerId ? null : undefined
+							);
+						}
+					}
+					const globalResult = await runTransaction(globalSlotRef, (current) => {
+						if (current === null) {
+							return { bookingId, userId: booking.userId, studioKey, reservedAt: Date.now() };
+						}
+						if (current.bookingId === bookingId) return current;
+						return;
+					});
+					if (!globalResult.committed) {
+						throw new Error("That time was just booked in another studio. Choose a different time.");
+					}
+					if (!globallyOwned) reservation.global.push(slotKey);
+
 					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
 					const previous = await get(slotRef);
 					const alreadyOwned = previous.child("bookingId").val() === bookingId;
@@ -811,18 +1018,24 @@
 						return;
 					});
 					if (!result.committed) throw new Error("This studio time slot was just booked by someone else. Choose another time.");
-					if (!alreadyOwned) reservedKeys.push(slotKey);
+					if (!alreadyOwned) reservation.legacy.push(slotKey);
 				}
-				return reservedKeys;
+				return reservation;
 			} catch (error) {
-				await releaseBookingSlots(booking.date, reservedKeys, bookingId);
+				await releaseBookingSlots(booking.date, reservation, bookingId);
 				throw error;
 			}
 		}
 
-		async function releaseBookingSlots(date, slotKeys, bookingId) {
-			for (const slotKey of slotKeys) {
+		async function releaseBookingSlots(date, reservation, bookingId) {
+			for (const slotKey of reservation.legacy) {
 				const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === bookingId ? null : undefined
+				);
+			}
+			for (const slotKey of reservation.global) {
+				const slotRef = ref(database, `globalBookingSlots/${date}/${slotKey}`);
 				await runTransaction(slotRef, (current) =>
 					current?.bookingId === bookingId ? null : undefined
 				);
@@ -832,6 +1045,7 @@
 		function applyManagedStudios(nextStudios) {
 			studios = new Map(nextStudios.map((studio) => [studio.key, studio.name]));
 			studioName = studioKey ? studios.get(studioKey) : undefined;
+			listenForBookingAvailability();
 			if (studioName) {
 				document.querySelector("#booking-title").textContent = `Book ${studioName}`;
 				confirmButton.disabled = false;
@@ -874,6 +1088,10 @@
 				emptyMessage.setAttribute("role", "option");
 				emptyMessage.setAttribute("aria-disabled", "true");
 				nameOptions.append(emptyMessage);
+				return;
+			}
+			if (!availabilityReady || availabilityDate !== document.querySelector("#booking-date").value) {
+				setMessage("Checking all studio availability. Please wait a moment and try again.", "error");
 				return;
 			}
 
@@ -1224,6 +1442,12 @@
 		populateDateOptions();
 		scheduleDateRefresh();
 		renderNameOptions();
+		document.querySelector("#booking-date").addEventListener("change", () => {
+			document.querySelector("#start-time").value = "";
+			document.querySelector("#end-time").value = "";
+			listenForBookingAvailability();
+		});
+		document.querySelector("#start-time").addEventListener("change", renderBookingTimeAvailability);
 
 		if (!studioName) {
 			setMessage("The selected studio is invalid. Return to the dashboard and choose a studio.", "error");
@@ -1248,6 +1472,7 @@
 
 				currentUser = user;
 				currentRole = user.email.toLowerCase() === "websankul@gmail.com" ? "Admin" : "Faculty";
+				listenForBookingAvailability();
 				adminTools.hidden = currentRole !== "Admin";
 				youtubeChannelAdminTools.hidden = currentRole !== "Admin";
 				batchAdminTools.hidden = currentRole !== "Admin";
@@ -1443,6 +1668,7 @@
 				option.disabled = Boolean(option.value) && option.value <= startTime;
 			}
 			if (endTime.value && endTime.value <= startTime) endTime.value = "";
+			renderBookingTimeAvailability();
 		});
 
 		updateBatchPickerVisibility();
@@ -1517,7 +1743,7 @@
 			confirmButton.disabled = true;
 			setMessage("Saving your booking…");
 			const bookingRef = push(ref(database, `bookings/${studioKey}`));
-			let reservedSlotKeys = [];
+			let reservedSlotKeys = { global: [], legacy: [] };
 			let bookingDate = "";
 			try {
 				const booking = {
@@ -1560,7 +1786,7 @@
 					window.location.replace(`dashboard.html?date=${encodeURIComponent(booking.date)}`);
 				}, 250);
 			} catch (error) {
-				if (reservedSlotKeys.length > 0) {
+				if (reservedSlotKeys.global.length > 0 || reservedSlotKeys.legacy.length > 0) {
 					try {
 						await releaseBookingSlots(bookingDate, reservedSlotKeys, `${studioKey}/${bookingRef.key}`);
 					} catch (releaseError) {

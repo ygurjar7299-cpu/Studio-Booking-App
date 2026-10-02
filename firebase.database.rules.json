@@ -1,0 +1,127 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "bookings": {
+      "$studioKey": {
+        ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+        ".indexOn": ["date"],
+        "$bookingId": {
+          ".write": "auth != null && (auth.token.email === 'websankul@gmail.com' || (!data.exists() && auth.token.email === 'ho.websankul@gmail.com' && newData.child('userId').val() === auth.uid))",
+          ".validate": "newData.hasChildren(['name', 'date', 'startTime', 'endTime', 'time', 'purpose', 'subject', 'userId', 'createdAt'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "date": {
+            ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
+          },
+          "startTime": {
+            ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+          },
+          "endTime": {
+            ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+          },
+          "time": {
+            ".validate": "newData.isString() && newData.val().matches(/^\\d{2}:\\d{2}$/)"
+          },
+          "purpose": {
+            ".validate": "newData.isString() && (newData.val() === 'YouTube Live' || newData.val() === 'YouTube Recording' || newData.val() === 'Planner' || newData.val() === 'Smart Course' || newData.val() === 'Application Live' || newData.val() === 'YouTube')"
+          },
+          "subject": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+          },
+          "userId": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "youtubeChannels": {
+            ".validate": "newData.hasChildren()",
+            "$channelIndex": {
+              ".validate": "newData.isString()"
+            }
+          },
+          "batchNames": {
+            ".validate": "newData.hasChildren()",
+            "$batchIndex": {
+              ".validate": "newData.isString()"
+            }
+          },
+          "batchName": {
+            ".validate": "newData.isString()"
+          },
+          "youtubeType": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "bookingSlots": {
+      "$studioKey": {
+        ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+        "$date": {
+          "$slotKey": {
+            ".write": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com') && (!data.exists() || auth.token.email === 'websankul@gmail.com' || data.child('userId').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['bookingId', 'userId']) && (auth.token.email === 'websankul@gmail.com' || newData.child('userId').val() === auth.uid)",
+            "bookingId": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "userId": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "reservedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    },
+    "globalBookingSlots": {
+      ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+      "$date": {
+        "$slotKey": {
+          ".write": "auth != null && (auth.token.email === 'websankul@gmail.com' || (auth.token.email === 'ho.websankul@gmail.com' && ((!data.exists() && newData.child('userId').val() === auth.uid) || (data.child('userId').val() === auth.uid && (!newData.exists() || newData.child('bookingId').val() === data.child('bookingId').val())))))",
+          ".validate": "newData.hasChildren(['bookingId', 'userId', 'studioKey', 'reservedAt'])",
+          "bookingId": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "userId": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "studioKey": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "reservedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "bookingNames": {
+      ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+      ".write": "auth != null && auth.token.email === 'websankul@gmail.com'"
+    },
+    "youtubeChannels": {
+      ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+      ".write": "auth != null && auth.token.email === 'websankul@gmail.com'"
+    },
+    "applicationLiveBatches": {
+      ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+      ".write": "auth != null && auth.token.email === 'websankul@gmail.com'"
+    },
+    "studioList": {
+      ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+      ".write": "auth != null && auth.token.email === 'websankul@gmail.com'"
+    }
+  }
+}
