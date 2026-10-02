@@ -861,8 +861,41 @@
 		}
 
 		function queueSheetSync(operation, payload) {
-			const queue = JSON.parse(localStorage.getItem("studioBookingSheetSyncQueue") || "[]");
+			const rawQueue = localStorage.getItem("studioBookingSheetSyncQueue");
+			let queue;
+			try {
+				queue = JSON.parse(rawQueue || "[]");
+			} catch (error) {
+				console.error("Could not read pending Google Sheet sync queue:", error);
+				throw new Error("Pending Google Sheet sync queue is invalid. Clear the damaged queue before retrying.");
+			}
 			if (!Array.isArray(queue)) throw new Error("The pending Google Sheet sync queue has an invalid format.");
+			if (operation === "delete" || operation === "deleteMany") {
+				const bookingIds = new Set(
+					operation === "delete"
+						? [payload?.bookingId]
+						: Array.isArray(payload?.bookingIds) ? payload.bookingIds : []
+				);
+				queue = queue.filter((item) => {
+					if (item?.operation === "upsert") {
+						return !bookingIds.has(item.payload?.booking?.bookingId);
+					}
+					if (item?.operation === "delete") return !bookingIds.has(item.payload?.bookingId);
+					if (item?.operation === "deleteMany" && Array.isArray(item.payload?.bookingIds)) {
+						item.payload.bookingIds = item.payload.bookingIds.filter((id) => !bookingIds.has(id));
+						return item.payload.bookingIds.length > 0;
+					}
+					return true;
+				});
+				const deletionAlreadyQueued = queue.some((item) =>
+					item?.operation === operation
+					&& JSON.stringify(item.payload) === JSON.stringify(payload)
+				);
+				if (deletionAlreadyQueued) {
+					localStorage.setItem("studioBookingSheetSyncQueue", JSON.stringify(queue));
+					return;
+				}
+			}
 			queue.push({ operation, payload });
 			localStorage.setItem("studioBookingSheetSyncQueue", JSON.stringify(queue));
 		}
@@ -1131,21 +1164,28 @@
 				let sheetSyncMessage = "";
 				if (deletedCount > 0) {
 					const bookingIds = deletedBookings.map((booking) => `${booking.studio.key}/${booking.key}`);
+					const deletionPayload = {
+						bookingIds,
+						bookings: deletedBookings.map((booking) => ({
+							...booking.data,
+							bookingId: `${booking.studio.key}/${booking.key}`,
+							studio: booking.studio.name,
+							studioKey: booking.studio.key,
+							studioOrder: studios.findIndex((studio) => studio.key === booking.studio.key)
+						}))
+					};
 					removePendingBookingUpserts(bookingIds);
 					try {
-						await syncBookingsWithSheet("deleteMany", {
-							bookingIds,
-							bookings: deletedBookings.map((booking) => ({
-								...booking.data,
-								bookingId: `${booking.studio.key}/${booking.key}`,
-								studio: booking.studio.name,
-								studioKey: booking.studio.key,
-								studioOrder: studios.findIndex((studio) => studio.key === booking.studio.key)
-							}))
-						});
+						await syncBookingsWithSheet("deleteMany", deletionPayload);
 						sheetSyncMessage = " Google Sheet synced.";
 					} catch (error) {
-						sheetSyncMessage = ` Google Sheet sync failed: ${error.message}`;
+						try {
+							queueSheetSync("deleteMany", deletionPayload);
+							sheetSyncMessage = ` Google Sheet sync failed; deletion queued for automatic retry: ${error.message}`;
+						} catch (queueError) {
+							sheetSyncMessage = ` Google Sheet sync failed: ${error.message}. Could not queue retry: ${queueError.message}`;
+							console.error("Could not queue date-range Google Sheet deletion:", queueError);
+						}
 						console.error("Date-range Google Sheet sync failed:", error);
 					}
 				}
@@ -1576,7 +1616,22 @@
 						: "Booking deleted from Firebase and Google Sheet.";
 					databaseStatus.classList.toggle("error", Boolean(slotCleanupWarning));
 				} catch (error) {
-					databaseStatus.textContent = `Booking deleted from Firebase. Google Sheet sync failed: ${error.message}.${slotCleanupWarning ? ` ${slotCleanupWarning}` : ""}`;
+					try {
+						queueSheetSync("delete", {
+							bookingId,
+							booking: {
+								...booking,
+								bookingId,
+								studio: studio.name,
+								studioKey: studio.key,
+								studioOrder: studios.findIndex((entry) => entry.key === studio.key)
+							}
+						});
+						databaseStatus.textContent = `Booking deleted from Firebase. Google Sheet removal is queued for automatic retry: ${error.message}.${slotCleanupWarning ? ` ${slotCleanupWarning}` : ""}`;
+					} catch (queueError) {
+						databaseStatus.textContent = `Booking deleted from Firebase. Google Sheet sync failed: ${error.message}; retry could not be queued: ${queueError.message}.${slotCleanupWarning ? ` ${slotCleanupWarning}` : ""}`;
+						console.error("Could not queue deleted booking Google Sheet sync:", queueError);
+					}
 					databaseStatus.classList.add("error");
 					console.error("Deleted booking Google Sheet sync failed:", error);
 				}
