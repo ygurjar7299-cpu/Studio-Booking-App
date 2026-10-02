@@ -1477,8 +1477,7 @@
 
 		function renderEditableList(container, values, fieldName, placeholder) {
 			container.replaceChildren();
-			const entries = values.length ? values : [""];
-			entries.forEach((value, index) => {
+			values.forEach((value, index) => {
 				const row = document.createElement("div");
 				row.className = "edit-entry-row";
 				const number = document.createElement("span");
