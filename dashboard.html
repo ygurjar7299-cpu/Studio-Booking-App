@@ -173,6 +173,7 @@
 		.studio-management-name { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
 		.studio-management-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 		.studio-management-actions button { min-height: 30px; padding: 4px 9px; }
+		.studio-management-actions .studio-order-button { min-width: 62px; }
 		.studio-management-actions .studio-delete-button { color: #a1261d; background: #fff; border-color: #f0c6c2; }
 		.studio-add-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
 		.studio-add-controls label { display: grid; gap: 6px; color: #4b5563; font-size: 12px; }
@@ -286,7 +287,7 @@
 			<div id="studio-schedules"></div>
 			<section class="range-section admin-tools" id="admin-tools" hidden>
 				<h2>Admin: Manage Studios</h2>
-				<p>Add studios or edit/delete their names. Deleting a studio keeps its existing bookings in Firebase.</p>
+				<p>Use Up/Down to set the studio sequence shown on the dashboard and used for Google Sheet entries. Deleting a studio keeps its existing bookings in Firebase.</p>
 				<div class="studio-add-controls">
 					<label for="new-studio-name">New Studio Name<input id="new-studio-name" type="text" maxlength="100" placeholder="Enter studio name"></label>
 					<button class="range-button export-button" id="add-studio-button" type="button">Add Studio</button>
@@ -392,6 +393,22 @@
 			{ key: "sharanam2", name: "Sharanam 2" },
 			{ key: "sharanam3", name: "Sharanam 3" }
 		];
+		function orderedStudioEntries(entries) {
+			const defaultOrder = new Map(initialStudios.map((studio, index) => [studio.key, index]));
+			return Object.values(entries || {})
+				.filter((studio) => studio && typeof studio.key === "string" && typeof studio.name === "string")
+				.map((studio, index) => ({
+					...studio,
+					order: Number.isInteger(studio.order) ? studio.order : (defaultOrder.get(studio.key) ?? initialStudios.length + index)
+				}))
+				.sort((first, second) => first.order - second.order || first.key.localeCompare(second.key));
+		}
+		function indexedStudioEntries(entries) {
+			return Object.fromEntries(orderedStudioEntries(entries).map((studio, order) => [
+				studio.key,
+				{ ...studio, order }
+			]));
+		}
 		let studios = [...initialStudios];
 		const studiosRef = ref(database, "studioList");
 		const SHEETS_SYNC_URL = "https://script.google.com/macros/s/AKfycbxMA_HBB-ZWDdVl7SB1kQi0g48uW1F-wN3BCreQhqPG7L4seTWfErqEh4CRlE3si9H5ig/exec";
@@ -794,7 +811,7 @@
 				if (!Array.isArray(pendingSyncs)) throw new Error("The pending Google Sheet sync queue has an invalid format.");
 				while (pendingSyncs.length > 0) {
 					const nextSync = pendingSyncs[0];
-					await syncBookingsWithSheet(nextSync.operation, nextSync.payload);
+					await syncBookingsWithSheet(nextSync.operation, prepareSheetSyncPayload(nextSync.operation, nextSync.payload));
 					pendingSyncs = pendingSyncs.slice(1);
 					localStorage.setItem("studioBookingSheetSyncQueue", JSON.stringify(pendingSyncs));
 				}
@@ -809,6 +826,30 @@
 			}
 		}
 
+		function prepareSheetSyncPayload(operation, payload) {
+			if (operation !== "upsert" || !payload?.booking) return payload;
+			const booking = payload.booking;
+			const studioKey = booking.studioKey || String(booking.bookingId || "").split("/")[0];
+			const studioIndex = studios.findIndex((studio) => studio.key === studioKey);
+			const studio = studios[studioIndex];
+			return {
+				...payload,
+				booking: {
+					...booking,
+					...(studio ? { studio: studio.name } : {}),
+					studioKey,
+					studioOrder: studioIndex >= 0 ? studioIndex : booking.studioOrder
+				}
+			};
+		}
+
+		function queueSheetSync(operation, payload) {
+			const queue = JSON.parse(localStorage.getItem("studioBookingSheetSyncQueue") || "[]");
+			if (!Array.isArray(queue)) throw new Error("The pending Google Sheet sync queue has an invalid format.");
+			queue.push({ operation, payload });
+			localStorage.setItem("studioBookingSheetSyncQueue", JSON.stringify(queue));
+		}
+
 		function setStudioManagementStatus(text, isError = false) {
 			const status = document.querySelector("#studio-management-status");
 			status.textContent = text;
@@ -818,14 +859,28 @@
 		function renderStudioManagement() {
 			const list = document.querySelector("#studio-management-list");
 			list.replaceChildren();
-			for (const studio of studios) {
+			for (const [index, studio] of studios.entries()) {
 				const item = document.createElement("li");
 				item.className = "studio-management-item";
 				const name = document.createElement("span");
 				name.className = "studio-management-name";
-				name.textContent = studio.name;
+				name.textContent = `${index + 1}. ${studio.name}`;
 				const actions = document.createElement("div");
 				actions.className = "studio-management-actions";
+				const moveUpButton = document.createElement("button");
+				moveUpButton.className = "studio-order-button";
+				moveUpButton.type = "button";
+				moveUpButton.textContent = "Up";
+				moveUpButton.disabled = index === 0;
+				moveUpButton.setAttribute("aria-label", `Move ${studio.name} up`);
+				moveUpButton.addEventListener("click", () => void moveManagedStudio(studio.key, -1));
+				const moveDownButton = document.createElement("button");
+				moveDownButton.className = "studio-order-button";
+				moveDownButton.type = "button";
+				moveDownButton.textContent = "Down";
+				moveDownButton.disabled = index === studios.length - 1;
+				moveDownButton.setAttribute("aria-label", `Move ${studio.name} down`);
+				moveDownButton.addEventListener("click", () => void moveManagedStudio(studio.key, 1));
 				const editButton = document.createElement("button");
 				editButton.type = "button";
 				editButton.textContent = "Edit";
@@ -842,7 +897,7 @@
 					const confirmed = window.confirm(`Delete ${studio.name} from the studio list? Existing bookings will remain stored.`);
 					if (confirmed) await updateManagedStudio(studio.key, studio.name, "delete");
 				});
-				actions.append(editButton, deleteButton);
+				actions.append(moveUpButton, moveDownButton, editButton, deleteButton);
 				item.append(name, actions);
 				list.append(item);
 			}
@@ -868,22 +923,23 @@
 						&& typeof existing.entries === "object";
 					const entries = hasInitializedList
 						? { ...existing.entries }
-						: Object.fromEntries(initialStudios.map((studio) => [studio.key, studio]));
+						: Object.fromEntries(initialStudios.map((studio, order) => [studio.key, { ...studio, order }]));
+					const normalizedEntries = indexedStudioEntries(entries);
 					if (action === "add") {
-						if (Object.values(entries).some((studio) => studio?.name?.toLocaleLowerCase() === normalizedName.toLocaleLowerCase())) return;
-						if (entries[proposedKey]) return;
-						entries[proposedKey] = { key: proposedKey, name: normalizedName };
+						if (Object.values(normalizedEntries).some((studio) => studio?.name?.toLocaleLowerCase() === normalizedName.toLocaleLowerCase())) return;
+						if (normalizedEntries[proposedKey]) return;
+						normalizedEntries[proposedKey] = { key: proposedKey, name: normalizedName, order: Object.keys(normalizedEntries).length };
 					} else if (action === "edit") {
-						if (!entries[key]) return;
-						if (Object.values(entries).some((studio) =>
+						if (!normalizedEntries[key]) return;
+						if (Object.values(normalizedEntries).some((studio) =>
 							studio?.key !== key && studio?.name?.toLocaleLowerCase() === normalizedName.toLocaleLowerCase()
 						)) return;
-						entries[key] = { key, name: normalizedName };
+						normalizedEntries[key] = { ...normalizedEntries[key], key, name: normalizedName };
 					} else {
-						if (!entries[key]) return;
-						delete entries[key];
+						if (!normalizedEntries[key]) return;
+						delete normalizedEntries[key];
 					}
-					return { initialized: true, entries };
+					return { initialized: true, entries: indexedStudioEntries(normalizedEntries) };
 				});
 				if (!result.committed) {
 					setStudioManagementStatus(
@@ -899,6 +955,54 @@
 			} catch (error) {
 				setStudioManagementStatus("Could not update studios. Check Firebase Database Rules.", true);
 				console.error(`Could not ${action} studio:`, error);
+			}
+		}
+
+		async function moveManagedStudio(key, direction) {
+			if (currentRole !== "Admin") {
+				setStudioManagementStatus("Only Admin can manage studio order.", true);
+				return;
+			}
+			try {
+				const result = await runTransaction(studiosRef, (existing) => {
+					const entries = existing?.initialized === true && existing.entries && typeof existing.entries === "object"
+						? existing.entries
+						: Object.fromEntries(initialStudios.map((studio, order) => [studio.key, { ...studio, order }]));
+					const ordered = orderedStudioEntries(entries);
+					const fromIndex = ordered.findIndex((studio) => studio.key === key);
+					const toIndex = fromIndex + direction;
+					if (fromIndex < 0 || toIndex < 0 || toIndex >= ordered.length) return;
+					[ordered[fromIndex], ordered[toIndex]] = [ordered[toIndex], ordered[fromIndex]];
+					return {
+						initialized: true,
+						entries: Object.fromEntries(ordered.map((studio, order) => [
+							studio.key,
+							{ ...studio, order }
+						]))
+					};
+				});
+				if (!result.committed) {
+					setStudioManagementStatus("Studio order was not changed. Refresh and try again.", true);
+					return;
+				}
+				const ordered = orderedStudioEntries(result.snapshot.val()?.entries || {});
+				const payload = { studios: ordered.map(({ key: studioKey, name }, order) => ({ key: studioKey, name, order })) };
+				try {
+					await syncBookingsWithSheet("setStudioOrder", payload);
+					setStudioManagementStatus("Studio order saved and Google Sheet updated.");
+				} catch (error) {
+					try {
+						queueSheetSync("setStudioOrder", payload);
+						setStudioManagementStatus(`Studio order saved. Google Sheet will retry on the next dashboard visit: ${error.message}`, true);
+					} catch (queueError) {
+						setStudioManagementStatus(`Studio order saved, but Google Sheet sync could not be queued: ${queueError.message}`, true);
+						console.error("Could not queue Google Sheet studio-order sync:", queueError);
+					}
+					console.error("Google Sheet studio-order sync failed:", error);
+				}
+			} catch (error) {
+				setStudioManagementStatus("Could not update studio order. Check Firebase Database Rules.", true);
+				console.error("Could not update studio order:", error);
 			}
 		}
 
@@ -1017,7 +1121,9 @@
 							bookings: deletedBookings.map((booking) => ({
 								...booking.data,
 								bookingId: `${booking.studio.key}/${booking.key}`,
-								studio: booking.studio.name
+								studio: booking.studio.name,
+								studioKey: booking.studio.key,
+								studioOrder: studios.findIndex((studio) => studio.key === booking.studio.key)
 							}))
 						});
 						sheetSyncMessage = " Google Sheet synced.";
@@ -1397,7 +1503,9 @@
 						booking: {
 							...updatedBooking,
 							bookingId: `${studio.key}/${booking.bookingKey}`,
-							studio: studio.name
+							studio: studio.name,
+							studioKey: studio.key,
+							studioOrder: studios.findIndex((entry) => entry.key === studio.key)
 						}
 					});
 					databaseStatus.textContent = "Booking updated in Firebase and Google Sheet.";
@@ -1431,7 +1539,13 @@
 				try {
 					await syncBookingsWithSheet("delete", {
 						bookingId,
-						booking: { ...booking, bookingId, studio: studio.name }
+						booking: {
+							...booking,
+							bookingId,
+							studio: studio.name,
+							studioKey: studio.key,
+							studioOrder: studios.findIndex((entry) => entry.key === studio.key)
+						}
 					});
 					databaseStatus.textContent = slotCleanupWarning
 						? `Booking deleted from Firebase and Google Sheet. ${slotCleanupWarning}`
@@ -1569,9 +1683,7 @@
 					const list = snapshot.val();
 					if (list?.initialized === true) {
 						const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
-						const managedStudios = Object.values(entries)
-							.filter((studio) => studio && typeof studio.key === "string" && typeof studio.name === "string")
-							.map((studio) => ({ key: studio.key, name: studio.name }));
+						const managedStudios = orderedStudioEntries(entries);
 						applyManagedStudios(managedStudios);
 					} else {
 						applyManagedStudios([...initialStudios]);
