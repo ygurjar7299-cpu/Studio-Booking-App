@@ -507,7 +507,7 @@
 					frame.remove();
 				};
 				const onMessage = (event) => {
-					if (event.source !== frame.contentWindow || event.data?.requestId !== requestId) return;
+					if (event.data?.requestId !== requestId) return;
 					cleanup();
 					if (event.data.success) resolve();
 					else reject(new Error(event.data.message || "Google Sheet sync failed."));
