@@ -343,13 +343,13 @@
 					</label>
 					<label>Subject<input id="edit-booking-subject" name="subject" type="text" maxlength="120" required></label>
 					<label class="edit-full-width" id="edit-booking-channels-field">YouTube Channel(s)
-						<textarea id="edit-booking-channels" name="youtubeChannels" placeholder="Separate multiple channels with commas"></textarea>
+						<textarea id="edit-booking-channels" name="youtubeChannels" placeholder="1. Channel name"></textarea>
 					</label>
-					<p class="edit-booking-help edit-full-width" id="edit-booking-channels-help">Enter one or more channel names, separated by commas.</p>
+					<p class="edit-booking-help edit-full-width" id="edit-booking-channels-help">Add one channel per line. Edit a line to change it, add a new line to add one, or delete a line to remove it.</p>
 					<label class="edit-full-width" id="edit-booking-batches-field">Application Live Batch Name(s)
-						<textarea id="edit-booking-batches" name="batchNames" placeholder="Separate multiple batches with commas"></textarea>
+						<textarea id="edit-booking-batches" name="batchNames" placeholder="1. Batch name"></textarea>
 					</label>
-					<p class="edit-booking-help edit-full-width" id="edit-booking-batches-help">Enter one or more batch names, separated by commas.</p>
+					<p class="edit-booking-help edit-full-width" id="edit-booking-batches-help">Add one batch per line. Edit a line to change it, add a new line to add one, or delete a line to remove it.</p>
 				</div>
 				<div class="edit-booking-actions">
 					<button type="submit" value="cancel">Cancel</button>
@@ -565,14 +565,16 @@
 			const requestedEnd = bookingTimeMinutes(booking.endTime);
 			const normalizedFaculty = normalizeFacultyName(booking.name);
 			const facultyKey = facultyNameKey(booking.name);
-			for (const studio of studios) {
-				const bookingsSnapshot = await get(query(
+			const bookingsByStudio = await Promise.all(studios.map(async (studio) => {
+				const snapshot = await get(query(
 					ref(database, `bookings/${studio.key}`),
 					orderByChild("date"),
 					equalTo(booking.date)
 				));
-				if (!bookingsSnapshot.exists()) continue;
-				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
+				return { studio, bookings: snapshot.exists() ? snapshot.val() : {} };
+			}));
+			for (const { studio, bookings } of bookingsByStudio) {
+				const conflict = Object.entries(bookings).some(([key, existing]) => {
 					if (!existing || (studio.key === studioKey && key === excludedBookingKey) || `${studio.key}/${key}` === bookingId
 						|| existing.date !== booking.date) return false;
 					if (studio.key !== studioKey && normalizeFacultyName(existing.name) !== normalizedFaculty) return false;
@@ -592,7 +594,7 @@
 
 			const reservation = { legacy: [], faculty: [], facultyKey };
 			try {
-				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+				const slotResults = await Promise.allSettled(bookingSlotKeys(booking.startTime, booking.endTime).map(async (slotKey) => {
 					const facultySlotRef = ref(database, `facultyBookingSlots/${booking.date}/${facultyKey}/${slotKey}`);
 					const facultyPrevious = await get(facultySlotRef);
 					const facultyAlreadyOwned = facultyPrevious.child("bookingId").val() === bookingId;
@@ -654,7 +656,9 @@
 					});
 					if (!result.committed) throw new Error("This studio time slot was just booked by someone else. Choose another time.");
 					if (!alreadyOwned) reservation.legacy.push(slotKey);
-				}
+				}));
+				const failedSlot = slotResults.find((result) => result.status === "rejected");
+				if (failedSlot) throw failedSlot.reason;
 				return reservation;
 			} catch (error) {
 				await releaseBookingSlots(studioKey, booking.date, reservation, bookingId);
@@ -1460,6 +1464,17 @@
 			document.querySelector("#edit-booking-batches-help").hidden = !showBatches;
 		}
 
+		function formatEditableList(values) {
+			return values.map((value, index) => `${index + 1}. ${value}`).join("\n");
+		}
+
+		function parseEditableList(value) {
+			return String(value || "")
+				.split(/\r?\n|,/)
+				.map((entry) => entry.trim().replace(/^\d+[.)]\s*/, "").trim())
+				.filter(Boolean);
+		}
+
 		editPurposeSelect.addEventListener("change", updateEditBookingFields);
 
 		async function editBooking(studio, booking) {
@@ -1480,11 +1495,11 @@
 			editPurposeSelect.value = initialPurpose;
 			document.querySelector("#edit-booking-subject").value = booking.subject || "";
 			const existingYoutubeChannels = Array.isArray(booking.youtubeChannels) ? booking.youtubeChannels : [];
-			document.querySelector("#edit-booking-channels").value = existingYoutubeChannels.join(", ");
+			document.querySelector("#edit-booking-channels").value = formatEditableList(existingYoutubeChannels);
 			const existingBatchNames = Array.isArray(booking.batchNames)
 				? booking.batchNames
 				: typeof booking.batchName === "string" ? [booking.batchName] : [];
-			document.querySelector("#edit-booking-batches").value = existingBatchNames.join(", ");
+			document.querySelector("#edit-booking-batches").value = formatEditableList(existingBatchNames);
 			updateEditBookingFields();
 			editBookingDialog.showModal();
 			await new Promise((resolve) => {
@@ -1500,10 +1515,10 @@
 			const purpose = String(formData.get("purpose") || "").trim();
 			const subject = String(formData.get("subject") || "").trim();
 			const youtubeChannels = purpose === "YouTube Live"
-				? String(formData.get("youtubeChannels") || "").split(",").map((channel) => channel.trim()).filter(Boolean)
+				? parseEditableList(formData.get("youtubeChannels"))
 				: [];
 			const editedBatchNames = purpose === "Application Live"
-				? String(formData.get("batchNames") || "").split(",").map((batch) => batch.trim()).filter(Boolean)
+				? parseEditableList(formData.get("batchNames"))
 				: [];
 			if (purpose === "Application Live" && editedBatchNames.length === 0) {
 				databaseStatus.textContent = "Application Live needs at least one batch.";

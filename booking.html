@@ -924,14 +924,17 @@
 				throw new Error(`${studioName} and faculty availability is still loading. Wait a moment and try again.`);
 			}
 
-			for (const studio of studioSequence) {
-				const bookingsSnapshot = await get(query(
+			const bookingsByStudio = await Promise.all(studioSequence.map(async (studio) => {
+				const snapshot = await get(query(
 					ref(database, `bookings/${studio.key}`),
 					orderByChild("date"),
 					equalTo(booking.date)
 				));
-				if (!bookingsSnapshot.exists()) continue;
-				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
+				return { studio, bookings: snapshot.exists() ? snapshot.val() : {} };
+			}));
+			for (const { studio, bookings } of bookingsByStudio) {
+				const bookingEntries = Object.entries(bookings);
+				const conflict = bookingEntries.some(([key, existing]) => {
 					if (!existing || `${studio.key}/${key}` === excludedBookingId || existing.date !== booking.date) return false;
 					if (studio.key !== studioKey && normalizeFacultyName(existing.name) !== normalizedFaculty) return false;
 					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
@@ -950,7 +953,7 @@
 
 			const reservation = { legacy: [], faculty: [], facultyKey };
 			try {
-				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+				const slotResults = await Promise.allSettled(bookingSlotKeys(booking.startTime, booking.endTime).map(async (slotKey) => {
 					const facultySlotRef = ref(database, `facultyBookingSlots/${booking.date}/${facultyKey}/${slotKey}`);
 					const facultyPrevious = await get(facultySlotRef);
 					const facultyAlreadyOwned = facultyPrevious.child("bookingId").val() === bookingId;
@@ -1012,7 +1015,9 @@
 					});
 					if (!result.committed) throw new Error(`This time was just booked in ${studioName}. Choose another time.`);
 					if (!alreadyOwned) reservation.legacy.push(slotKey);
-				}
+				}));
+				const failedSlot = slotResults.find((result) => result.status === "rejected");
+				if (failedSlot) throw failedSlot.reason;
 				return reservation;
 			} catch (error) {
 				await releaseBookingSlots(booking.date, reservation, bookingId);
