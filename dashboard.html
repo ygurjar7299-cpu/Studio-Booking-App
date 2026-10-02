@@ -561,6 +561,33 @@
 			return keys;
 		}
 
+		function bookingOwnsSlot(booking, date, slotKey, facultyName = "") {
+			const match = /^(\d{2})-(\d{2})$/.exec(slotKey);
+			if (!booking || booking.date !== date || !match) return false;
+			if (facultyName && normalizeFacultyName(booking.name) !== facultyName) return false;
+			const slotStart = Number(match[1]) * 60 + Number(match[2]);
+			const start = bookingTimeMinutes(booking.startTime || booking.time);
+			const end = bookingTimeMinutes(booking.endTime);
+			return Number.isFinite(start) && Number.isFinite(end)
+				&& start < slotStart + 30 && slotStart < end;
+		}
+
+		async function clearStaleBookingSlot(slotRef, previous, date, slotKey, ownerStudio, ownerKey, facultyName = "") {
+			const ownerId = String(previous.child("bookingId").val() || "");
+			const ownerSnapshot = ownerStudio && ownerKey
+				? await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))
+				: null;
+			if (ownerSnapshot?.exists() && bookingOwnsSlot(ownerSnapshot.val(), date, slotKey, facultyName)) return;
+
+			const reservedAt = Number(previous.child("reservedAt").val());
+			const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+			if (ownerSnapshot?.exists() || reservationExpired) {
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === ownerId ? null : undefined
+				);
+			}
+		}
+
 		function normalizeFacultyName(name) {
 			return String(name || "").normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 		}
@@ -614,16 +641,9 @@
 						const separator = ownerId.indexOf("/");
 						const ownerStudio = separator >= 0 ? ownerId.slice(0, separator) : "";
 						const ownerKey = separator >= 0 ? ownerId.slice(separator + 1) : "";
-						const ownerExists = ownerStudio && ownerKey
-							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
-							: true;
-						const reservedAt = Number(facultyPrevious.child("reservedAt").val());
-						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
-						if (!ownerExists && reservationExpired) {
-							await runTransaction(facultySlotRef, (current) =>
-								current?.bookingId === ownerId ? null : undefined
-							);
-						}
+						await clearStaleBookingSlot(
+							facultySlotRef, facultyPrevious, booking.date, slotKey, ownerStudio, ownerKey, normalizedFaculty
+						);
 					}
 					const facultyResult = await runTransaction(facultySlotRef, (current) => {
 						if (current === null) {
@@ -649,16 +669,9 @@
 						const staleOwnerKey = staleOwnerId.startsWith(`${studioKey}/`)
 							? staleOwnerId.slice(studioKey.length + 1)
 							: "";
-						const reservedAt = Number(previous.child("reservedAt").val());
-						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
-						const ownerExists = staleOwnerKey
-							? (await get(ref(database, `bookings/${studioKey}/${staleOwnerKey}`))).exists()
-							: true;
-						if (!ownerExists && reservationExpired) {
-							await runTransaction(slotRef, (current) =>
-								current?.bookingId === staleOwnerId ? null : undefined
-							);
-						}
+						await clearStaleBookingSlot(
+							slotRef, previous, booking.date, slotKey, studioKey, staleOwnerKey
+						);
 					}
 					const result = await runTransaction(slotRef, (current) => {
 						if (current === null) return { bookingId, userId: booking.userId, reservedAt: Date.now() };
