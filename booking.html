@@ -834,8 +834,7 @@
 
 		function markAvailabilityLoaded(source) {
 			loadedAvailabilitySources.add(source);
-			const expected = studios.size + 1;
-			if (loadedAvailabilitySources.size >= expected && !availabilityError) {
+			if (loadedAvailabilitySources.has(`studio:${studioKey}`) && !availabilityError) {
 				availabilityReady = true;
 				setMessage("");
 			}
@@ -845,9 +844,7 @@
 		function updateAvailabilitySlots(source, slots) {
 			availabilitySlotsBySource.set(source, slots);
 			bookedSlotKeys.clear();
-			for (const sourceSlots of availabilitySlotsBySource.values()) {
-				for (const slotKey of sourceSlots) bookedSlotKeys.add(slotKey);
-			}
+			for (const slotKey of slots) bookedSlotKeys.add(slotKey);
 			markAvailabilityLoaded(source);
 		}
 
@@ -863,147 +860,70 @@
 			availabilityError = false;
 			availabilityReady = false;
 			renderBookingTimeAvailability();
-			setMessage("Checking availability across all studios…");
+			if (!studioKey || !studios.has(studioKey)) {
+				availabilityError = true;
+				setMessage("Choose a valid studio to check its availability.", "error");
+				return;
+			}
+			setMessage(`Checking ${studioName} availability…`);
 
 			const date = availabilityDate;
-			const globalSlotsRef = ref(database, `globalBookingSlots/${date}`);
-			availabilityStops.push(onValue(globalSlotsRef, async (snapshot) => {
+			const bookingsQuery = query(
+				ref(database, `bookings/${studioKey}`),
+				orderByChild("date"),
+				equalTo(date)
+			);
+			availabilityStops.push(onValue(bookingsQuery, (snapshot) => {
 				if (generation !== availabilityGeneration) return;
 				const slots = new Set();
-				const checks = [];
-				snapshot.forEach((slot) => {
-					const bookingId = String(slot.child("bookingId").val() || "");
-					if (!slot.key || !bookingId) return;
-					const reservedAt = Number(slot.child("reservedAt").val());
-					const stale = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
-					if (!stale) {
-						slots.add(slot.key);
-						return;
+				snapshot.forEach((child) => {
+					const booking = child.val();
+					if (!booking || typeof booking !== "object") return;
+					const startTime = booking.startTime || booking.time;
+					const endTime = booking.endTime;
+					if (!startTime || !endTime) return;
+					try {
+						for (const slotKey of bookingSlotKeys(startTime, endTime)) slots.add(slotKey);
+					} catch (error) {
+						console.warn(`Skipping invalid booking time while checking ${studioKey}:`, error);
 					}
-					const separator = bookingId.indexOf("/");
-					const ownerStudio = separator >= 0 ? bookingId.slice(0, separator) : "";
-					const ownerKey = separator >= 0 ? bookingId.slice(separator + 1) : "";
-					checks.push((async () => {
-						const ownerExists = ownerStudio && ownerKey
-							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
-							: true;
-						if (ownerExists) {
-							slots.add(slot.key);
-							return;
-						}
-						const slotRef = ref(database, `globalBookingSlots/${date}/${slot.key}`);
-						await runTransaction(slotRef, (current) =>
-							current?.bookingId === bookingId ? null : undefined
-						);
-					})());
 				});
-				try {
-					await Promise.all(checks);
-				} catch (error) {
-					if (generation !== availabilityGeneration) return;
-					availabilityError = true;
-					setMessage("Could not verify an existing slot reservation. Booking is disabled until it can be checked.", "error");
-					console.error("Could not verify a shared slot owner:", error);
-				}
-				if (generation !== availabilityGeneration) return;
-				updateAvailabilitySlots("global", slots);
+				updateAvailabilitySlots(`studio:${studioKey}`, slots);
 			}, (error) => {
 				if (generation !== availabilityGeneration) return;
 				availabilityError = true;
-				setMessage("Could not check shared booking availability. Try again after checking Firebase rules.", "error");
-				console.error("Could not read global booking slots:", error);
+				setMessage(`Could not check ${studioName} bookings. Booking is disabled until availability can be verified.`, "error");
+				console.error(`Could not read bookings for ${studioKey}:`, error);
 				renderBookingTimeAvailability();
 			}));
-			for (const studioKey of studios.keys()) {
-				const bookingsQuery = query(
-					ref(database, `bookings/${studioKey}`),
-					orderByChild("date"),
-					equalTo(date)
-				);
-				availabilityStops.push(onValue(bookingsQuery, (snapshot) => {
-					if (generation !== availabilityGeneration) return;
-					const slots = new Set();
-					snapshot.forEach((child) => {
-						const booking = child.val();
-						if (!booking || typeof booking !== "object") return;
-						const startTime = booking.startTime || booking.time;
-						const endTime = booking.endTime;
-						if (!startTime || !endTime) return;
-						try {
-							for (const slotKey of bookingSlotKeys(startTime, endTime)) slots.add(slotKey);
-						} catch (error) {
-							console.warn(`Skipping invalid booking time while checking ${studioKey}:`, error);
-						}
-					});
-					updateAvailabilitySlots(`studio:${studioKey}`, slots);
-				}, (error) => {
-					if (generation !== availabilityGeneration) return;
-					availabilityError = true;
-					setMessage("Could not check all studio bookings. Booking is disabled until availability can be verified.", "error");
-					console.error(`Could not read bookings for ${studioKey}:`, error);
-					renderBookingTimeAvailability();
-				}));
-			}
 		}
 
 		async function reserveBookingSlots(booking, bookingId, excludedBookingId = "") {
 			const requestedStart = bookingTimeMinutes(booking.startTime);
 			const requestedEnd = bookingTimeMinutes(booking.endTime);
 			if (!availabilityReady || availabilityDate !== booking.date) {
-				throw new Error("Shared availability is still loading. Wait a moment and try again.");
+				throw new Error(`${studioName} availability is still loading. Wait a moment and try again.`);
 			}
 
-			for (const otherStudioKey of studios.keys()) {
-				const bookingsSnapshot = await get(query(
-					ref(database, `bookings/${otherStudioKey}`),
-					orderByChild("date"),
-					equalTo(booking.date)
-				));
-				if (!bookingsSnapshot.exists()) continue;
+			const bookingsSnapshot = await get(query(
+				ref(database, `bookings/${studioKey}`),
+				orderByChild("date"),
+				equalTo(booking.date)
+			));
+			if (bookingsSnapshot.exists()) {
 				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
-					if (!existing || `${otherStudioKey}/${key}` === excludedBookingId || existing.date !== booking.date) return false;
+					if (!existing || `${studioKey}/${key}` === excludedBookingId || existing.date !== booking.date) return false;
 					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
 					const existingEnd = bookingTimeMinutes(existing.endTime);
 					return Number.isFinite(existingStart) && Number.isFinite(existingEnd)
 						&& requestedStart < existingEnd && existingStart < requestedEnd;
 				});
-				if (conflict) throw new Error("That time is already booked in a studio. Choose another time.");
+				if (conflict) throw new Error(`That time is already booked in ${studioName}. Choose another time.`);
 			}
 
-			const reservation = { global: [], legacy: [] };
+			const reservation = { legacy: [] };
 			try {
 				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
-					const globalSlotRef = ref(database, `globalBookingSlots/${booking.date}/${slotKey}`);
-					const globalPrevious = await get(globalSlotRef);
-					const globallyOwned = globalPrevious.child("bookingId").val() === bookingId;
-					if (globalPrevious.exists() && !globallyOwned) {
-						const ownerId = String(globalPrevious.child("bookingId").val() || "");
-						const separator = ownerId.indexOf("/");
-						const ownerStudio = separator >= 0 ? ownerId.slice(0, separator) : "";
-						const ownerKey = separator >= 0 ? ownerId.slice(separator + 1) : "";
-						const ownerExists = ownerStudio && ownerKey
-							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
-							: true;
-						const reservedAt = Number(globalPrevious.child("reservedAt").val());
-						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
-						if (!ownerExists || reservationExpired) {
-							await runTransaction(globalSlotRef, (current) =>
-								current?.bookingId === ownerId ? null : undefined
-							);
-						}
-					}
-					const globalResult = await runTransaction(globalSlotRef, (current) => {
-						if (current === null) {
-							return { bookingId, userId: booking.userId, studioKey, reservedAt: Date.now() };
-						}
-						if (current.bookingId === bookingId) return current;
-						return;
-					});
-					if (!globalResult.committed) {
-						throw new Error("That time was just booked in another studio. Choose a different time.");
-					}
-					if (!globallyOwned) reservation.global.push(slotKey);
-
 					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
 					const previous = await get(slotRef);
 					const alreadyOwned = previous.child("bookingId").val() === bookingId;
@@ -1028,7 +948,7 @@
 						if (current.bookingId === bookingId) return current;
 						return;
 					});
-					if (!result.committed) throw new Error("This studio time slot was just booked by someone else. Choose another time.");
+					if (!result.committed) throw new Error(`This time was just booked in ${studioName}. Choose another time.`);
 					if (!alreadyOwned) reservation.legacy.push(slotKey);
 				}
 				return reservation;
@@ -1041,12 +961,6 @@
 		async function releaseBookingSlots(date, reservation, bookingId) {
 			for (const slotKey of reservation.legacy) {
 				const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
-				await runTransaction(slotRef, (current) =>
-					current?.bookingId === bookingId ? null : undefined
-				);
-			}
-			for (const slotKey of reservation.global) {
-				const slotRef = ref(database, `globalBookingSlots/${date}/${slotKey}`);
 				await runTransaction(slotRef, (current) =>
 					current?.bookingId === bookingId ? null : undefined
 				);
@@ -1103,7 +1017,7 @@
 				return;
 			}
 			if (!availabilityReady || availabilityDate !== document.querySelector("#booking-date").value) {
-				setMessage("Checking all studio availability. Please wait a moment and try again.", "error");
+				setMessage(`Checking ${studioName} availability. Please wait a moment and try again.`, "error");
 				return;
 			}
 
@@ -1753,7 +1667,7 @@
 			confirmButton.disabled = true;
 			setMessage("Saving your booking…");
 			const bookingRef = push(ref(database, `bookings/${studioKey}`));
-			let reservedSlotKeys = { global: [], legacy: [] };
+			let reservedSlotKeys = { legacy: [] };
 			let bookingDate = "";
 			try {
 				const booking = {
@@ -1798,7 +1712,7 @@
 					window.location.replace(`dashboard.html?date=${encodeURIComponent(booking.date)}`);
 				}, 250);
 			} catch (error) {
-				if (reservedSlotKeys.global.length > 0 || reservedSlotKeys.legacy.length > 0) {
+				if (reservedSlotKeys.legacy.length > 0) {
 					try {
 						await releaseBookingSlots(bookingDate, reservedSlotKeys, `${studioKey}/${bookingRef.key}`);
 					} catch (releaseError) {
