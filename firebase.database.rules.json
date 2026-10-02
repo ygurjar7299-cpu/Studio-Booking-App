@@ -83,6 +83,35 @@
         }
       }
     },
+    "facultyBookingSlots": {
+      ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
+      "$date": {
+        "$facultyKey": {
+          "$slotKey": {
+            ".write": "auth != null && (auth.token.email === 'websankul@gmail.com' || (auth.token.email === 'ho.websankul@gmail.com' && ((!data.exists() && newData.child('userId').val() === auth.uid) || (data.child('userId').val() === auth.uid && (!newData.exists() || newData.child('bookingId').val() === data.child('bookingId').val())))))",
+            ".validate": "newData.hasChildren(['bookingId', 'userId', 'studioKey', 'facultyName', 'reservedAt'])",
+            "bookingId": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "userId": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "studioKey": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "facultyName": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+            },
+            "reservedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    },
     "globalBookingSlots": {
       ".read": "auth != null && (auth.token.email === 'websankul@gmail.com' || auth.token.email === 'ho.websankul@gmail.com')",
       "$date": {

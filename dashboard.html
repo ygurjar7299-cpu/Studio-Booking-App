@@ -550,29 +550,80 @@
 			return keys;
 		}
 
+		function normalizeFacultyName(name) {
+			return String(name || "").normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+		}
+
+		function facultyNameKey(name) {
+			const normalized = normalizeFacultyName(name);
+			if (!normalized) throw new Error("Select a faculty name before booking.");
+			return `faculty-${Array.from(new TextEncoder().encode(normalized), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+		}
+
 		async function reserveBookingSlots(studioKey, booking, bookingId, excludedBookingKey = "") {
 			const requestedStart = bookingTimeMinutes(booking.startTime);
 			const requestedEnd = bookingTimeMinutes(booking.endTime);
-			const bookingsSnapshot = await get(query(
-				ref(database, `bookings/${studioKey}`),
-				orderByChild("date"),
-				equalTo(booking.date)
-			));
-			if (bookingsSnapshot.exists()) {
+			const normalizedFaculty = normalizeFacultyName(booking.name);
+			const facultyKey = facultyNameKey(booking.name);
+			for (const studio of studios) {
+				const bookingsSnapshot = await get(query(
+					ref(database, `bookings/${studio.key}`),
+					orderByChild("date"),
+					equalTo(booking.date)
+				));
+				if (!bookingsSnapshot.exists()) continue;
 				const conflict = Object.entries(bookingsSnapshot.val()).some(([key, existing]) => {
-					if (!existing || key === excludedBookingKey || `${studioKey}/${key}` === bookingId
+					if (!existing || (studio.key === studioKey && key === excludedBookingKey) || `${studio.key}/${key}` === bookingId
 						|| existing.date !== booking.date) return false;
+					if (studio.key !== studioKey && normalizeFacultyName(existing.name) !== normalizedFaculty) return false;
 					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
 					const existingEnd = bookingTimeMinutes(existing.endTime);
 					return Number.isFinite(existingStart) && Number.isFinite(existingEnd)
 						&& requestedStart < existingEnd && existingStart < requestedEnd;
 				});
-				if (conflict) throw new Error(`That time is already booked in ${studios.find((studio) => studio.key === studioKey)?.name || "this studio"}. Choose another time.`);
+				if (conflict) {
+					const conflictingStudio = studio.name || "another studio";
+					const reason = studio.key === studioKey
+						? `${conflictingStudio} already has a booking at that time`
+						: `${booking.name} already has a booking in ${conflictingStudio} at that time`;
+					throw new Error(`${reason}. Choose another time.`);
+				}
 			}
 
-			const reservation = { legacy: [] };
+			const reservation = { legacy: [], faculty: [], facultyKey };
 			try {
 				for (const slotKey of bookingSlotKeys(booking.startTime, booking.endTime)) {
+					const facultySlotRef = ref(database, `facultyBookingSlots/${booking.date}/${facultyKey}/${slotKey}`);
+					const facultyPrevious = await get(facultySlotRef);
+					const facultyAlreadyOwned = facultyPrevious.child("bookingId").val() === bookingId;
+					if (facultyPrevious.exists() && !facultyAlreadyOwned) {
+						const ownerId = String(facultyPrevious.child("bookingId").val() || "");
+						const separator = ownerId.indexOf("/");
+						const ownerStudio = separator >= 0 ? ownerId.slice(0, separator) : "";
+						const ownerKey = separator >= 0 ? ownerId.slice(separator + 1) : "";
+						const ownerExists = ownerStudio && ownerKey
+							? (await get(ref(database, `bookings/${ownerStudio}/${ownerKey}`))).exists()
+							: true;
+						const reservedAt = Number(facultyPrevious.child("reservedAt").val());
+						const reservationExpired = Number.isFinite(reservedAt) && Date.now() - reservedAt > 30000;
+						if (!ownerExists && reservationExpired) {
+							await runTransaction(facultySlotRef, (current) =>
+								current?.bookingId === ownerId ? null : undefined
+							);
+						}
+					}
+					const facultyResult = await runTransaction(facultySlotRef, (current) => {
+						if (current === null) {
+							return { bookingId, userId: booking.userId, studioKey, facultyName: normalizedFaculty, reservedAt: Date.now() };
+						}
+						if (current.bookingId === bookingId) return current;
+						return;
+					});
+					if (!facultyResult.committed) {
+						throw new Error(`${booking.name} already has a booking in another studio at that time. Choose another time.`);
+					}
+					if (!facultyAlreadyOwned) reservation.faculty.push(slotKey);
+
 					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
 					const previous = await get(slotRef);
 					const alreadyOwned = previous.child("bookingId").val() === bookingId;
@@ -586,7 +637,7 @@
 						const ownerExists = staleOwnerKey
 							? (await get(ref(database, `bookings/${studioKey}/${staleOwnerKey}`))).exists()
 							: true;
-						if (!ownerExists || reservationExpired) {
+						if (!ownerExists && reservationExpired) {
 							await runTransaction(slotRef, (current) =>
 								current?.bookingId === staleOwnerId ? null : undefined
 							);
@@ -610,6 +661,12 @@
 		async function releaseBookingSlots(studioKey, date, reservation, bookingId) {
 			for (const slotKey of reservation.legacy) {
 				const slotRef = ref(database, `bookingSlots/${studioKey}/${date}/${slotKey}`);
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === bookingId ? null : undefined
+				);
+			}
+			for (const slotKey of reservation.faculty || []) {
+				const slotRef = ref(database, `facultyBookingSlots/${date}/${reservation.facultyKey}/${slotKey}`);
 				await runTransaction(slotRef, (current) =>
 					current?.bookingId === bookingId ? null : undefined
 				);
@@ -653,6 +710,23 @@
 						if (remainingBookingId === bookingId || remainingBookingId === bookingKey) failedSlots.push(slotKey);
 					} catch (error) {
 						failedSlots.push(`${slotKey} (${error.message || "permission/network error"})`);
+					}
+				}
+				if (booking.name) {
+					const facultyKey = facultyNameKey(booking.name);
+					const facultySlotsSnapshot = await get(ref(database, `facultyBookingSlots/${date}/${facultyKey}`));
+					const facultyEntries = [];
+					facultySlotsSnapshot.forEach((child) => {
+						if (child.key && child.child("bookingId").val() === bookingId) facultyEntries.push(child.key);
+					});
+					for (const slotKey of facultyEntries) {
+						const facultySlotRef = ref(database, `facultyBookingSlots/${date}/${facultyKey}/${slotKey}`);
+						try {
+							await remove(facultySlotRef);
+							if ((await get(facultySlotRef)).exists()) failedSlots.push(`faculty ${slotKey}`);
+						} catch (error) {
+							failedSlots.push(`faculty ${slotKey} (${error.message || "permission/network error"})`);
+						}
 					}
 				}
 				return failedSlots.length
@@ -1419,9 +1493,10 @@
 				batchName: batchNames.length === 1 ? batchNames[0] : null,
 				youtubeType: purpose.startsWith("YouTube ") ? purpose.slice("YouTube ".length) : null
 			};
-			let newlyReservedSlots = { legacy: [] };
+			let newlyReservedSlots = { legacy: [], faculty: [], facultyKey: "" };
 			const bookingId = `${studio.key}/${booking.bookingKey}`;
 			const oldSlotKeys = bookingSlotKeys(booking.startTime || booking.time, booking.endTime);
+			const oldFacultyKey = facultyNameKey(booking.name);
 			let newSlotKeys;
 			let bookingUpdated = false;
 			try {
@@ -1434,10 +1509,19 @@
 				);
 				await update(ref(database, `bookings/${studio.key}/${booking.bookingKey}`), updatedBooking);
 				bookingUpdated = true;
+				const facultyIdentityChanged = booking.date !== updatedBooking.date
+					|| normalizeFacultyName(booking.name) !== normalizeFacultyName(updatedBooking.name);
 				const releasedSlots = oldSlotKeys.filter((slotKey) =>
 					booking.date !== updatedBooking.date || !newSlotKeys.includes(slotKey)
 				);
-				await releaseBookingSlots(studio.key, booking.date, { legacy: releasedSlots }, bookingId);
+				const releasedFacultySlots = oldSlotKeys.filter((slotKey) =>
+					facultyIdentityChanged || !newSlotKeys.includes(slotKey)
+				);
+				await releaseBookingSlots(studio.key, booking.date, {
+					legacy: releasedSlots,
+					faculty: releasedFacultySlots,
+					facultyKey: oldFacultyKey
+				}, bookingId);
 				try {
 					await syncBookingsWithSheet("upsert", {
 						booking: {
@@ -1456,7 +1540,7 @@
 					console.error("Edited booking Google Sheet sync failed:", error);
 				}
 			} catch (error) {
-				if (!bookingUpdated && newlyReservedSlots.legacy.length > 0) {
+				if (!bookingUpdated && (newlyReservedSlots.legacy.length > 0 || newlyReservedSlots.faculty.length > 0)) {
 					try {
 						await releaseBookingSlots(studio.key, date, newlyReservedSlots, bookingId);
 					} catch (releaseError) {
