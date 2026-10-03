@@ -1406,7 +1406,15 @@
 			body.replaceChildren();
 
 			const bookings = bookingsByStudio.get(studio.key) ?? [];
-			const dateBookings = bookings.filter((booking) => booking.date === toDateKey(currentDate));
+			const dateBookings = bookings
+				.filter((booking) => booking.date === toDateKey(currentDate))
+				.sort((first, second) => {
+					const firstStart = bookingTimeMinutes(first.startTime || first.time);
+					const secondStart = bookingTimeMinutes(second.startTime || second.time);
+					if (!Number.isFinite(firstStart)) return Number.isFinite(secondStart) ? 1 : 0;
+					if (!Number.isFinite(secondStart)) return -1;
+					return firstStart - secondStart;
+				});
 			if (dateBookings.length === 0) {
 				const row = document.createElement("tr");
 				row.className = "empty-row";
