@@ -431,6 +431,7 @@
 		const stopListening = new Map();
 		const failedStudios = new Set();
 		const requestedDate = new URLSearchParams(window.location.search).get("date");
+		let pendingStudioFocusKey = new URLSearchParams(window.location.search).get("studio");
 		const parsedRequestedDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
 			? new Date(`${requestedDate}T00:00:00`)
 			: null;
@@ -1363,6 +1364,7 @@
 			for (const studio of studios) {
 				const section = document.createElement("section");
 				section.className = "studio-section";
+				section.dataset.studioKey = studio.key;
 
 				const title = document.createElement("h2");
 				title.textContent = `${studio.name} Bookings`;
@@ -1397,6 +1399,17 @@
 				section.append(tableWrap, bookButton);
 				schedulesContainer.append(section);
 				renderBookings(studio);
+			}
+			if (pendingStudioFocusKey) {
+				const targetSection = [...schedulesContainer.children].find(
+					(section) => section.dataset.studioKey === pendingStudioFocusKey
+				);
+				if (targetSection) {
+					pendingStudioFocusKey = null;
+					window.requestAnimationFrame(() => {
+						if (targetSection.isConnected) targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
+					});
+				}
 			}
 		}
 

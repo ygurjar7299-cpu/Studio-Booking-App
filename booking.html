@@ -1706,7 +1706,7 @@
 					confirmButton.textContent = "Confirm Booking";
 					setMessage("Booking confirmed and added to the Google Sheet. Returning to the dashboard…", "success");
 					window.setTimeout(() => {
-						window.location.replace(`dashboard.html?date=${encodeURIComponent(date)}`);
+						window.location.replace(`dashboard.html?date=${encodeURIComponent(date)}&studio=${encodeURIComponent(studioKey)}`);
 					}, 500);
 				} catch (error) {
 					setMessage(`Booking is saved in Firebase, but Google Sheet sync failed: ${error.message}. Select Confirm Booking to retry.`, "error");
@@ -1793,7 +1793,7 @@
 				}
 				confirmButton.disabled = true;
 				window.setTimeout(() => {
-					window.location.replace(`dashboard.html?date=${encodeURIComponent(booking.date)}`);
+					window.location.replace(`dashboard.html?date=${encodeURIComponent(booking.date)}&studio=${encodeURIComponent(studioKey)}`);
 				}, 250);
 			} catch (error) {
 				if (reservedSlotKeys.legacy.length > 0 || reservedSlotKeys.faculty.length > 0) {
