@@ -278,7 +278,7 @@
 			<h1 class="brand" id="welcome-heading">Welcome</h1>
 			<nav class="header-actions" aria-label="Dashboard navigation">
 				<a class="header-button" href="dashboard.html">Dashboard</a>
-				<button id="sign-out-button" type="button">Sign out</button>
+				<button id="sign-out-button" type="button">Sign out</button> 				<a class="header-button" id="telegram-button" href="telegram.html" hidden>Telegram</a>
 			</nav>
 		</header>
 		<main id="main-dashboard">
@@ -1842,7 +1842,7 @@
 				}
 
 				currentUser = user;
-				currentRole = role;
+				currentRole = role; 				document.querySelector("#telegram-button").hidden = role !== "Admin";
 				document.querySelector("#welcome-heading").textContent = `Welcome, ${role}`;
 				document.querySelector("#admin-tools").hidden = role !== "Admin";
 				document.querySelector("#booking-admin-tools").hidden = role !== "Admin";
