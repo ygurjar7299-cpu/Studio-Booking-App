@@ -4,24 +4,698 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="theme-color" content="#f4f5ef">
-	<title>Telegram | Websankul</title>
+	<title>Telegram Schedule | Websankul</title>
 	<style>
+		:root {
+			color-scheme: light;
+			--ink: #1d2d2c;
+			--muted: #687976;
+			--line: #d7e1de;
+			--paper: #eef5f2;
+			--white: #fff;
+			--green: #176b68;
+			--green-dark: #104c4b;
+			--warning-bg: #fff8e8;
+			--warning-line: #edcf83;
+		}
+
 		* { box-sizing: border-box; }
-		body { min-height: 100vh; margin: 0; padding: 28px 20px; color: #1d2d2c; background: #eef5f2; font-family: "Segoe UI", sans-serif; }
+
+		body {
+			min-height: 100vh;
+			margin: 0;
+			padding: 28px 20px;
+			color: var(--ink);
+			background: radial-gradient(circle at 14% 15%, rgb(23 107 104 / 12%), transparent 28%), var(--paper);
+			font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+		}
+
 		.page { width: min(100%, 1120px); margin: 0 auto; }
-		header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; padding: 16px 20px; color: #fff; background: linear-gradient(145deg, #123d49, #176b68 58%, #56a292); border-radius: 12px; }
-		h1 { margin: 0; font-size: 20px; }
-		a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; color: #fff; background: rgb(255 255 255 / 10%); border: 1px solid rgb(255 255 255 / 32%); border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; }
-		main { padding: 22px; background: #fff; border: 1px solid #d7e1de; border-radius: 10px; }
-		h2 { margin: 0 0 10px; color: #176b68; font-size: 19px; }
-		p { margin: 0; color: #687976; line-height: 1.6; }
-		@media (max-width: 600px) { body { padding: 14px 10px; } header, main { padding: 14px; } }
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 18px;
+			padding: 16px 20px;
+			color: #f8f8ef;
+			background: linear-gradient(145deg, #123d49 0%, #176b68 58%, #56a292 100%);
+			border-radius: 12px;
+		}
+
+		h1 { margin: 0; color: #fff; font-size: 20px; }
+		.header-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 36px;
+			padding: 0 12px;
+			color: #f8f8ef;
+			background: rgb(255 255 255 / 10%);
+			border: 1px solid rgb(255 255 255 / 32%);
+			border-radius: 6px;
+			font-size: 12px;
+			font-weight: 600;
+			text-decoration: none;
+		}
+		.header-button:hover { background: rgb(255 255 255 / 20%); }
+
+		main { display: grid; gap: 14px; }
+		.card {
+			padding: 20px;
+			background: var(--white);
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			box-shadow: 0 5px 16px rgb(32 57 49 / 7%);
+		}
+
+		h2 { margin: 0 0 8px; color: var(--green); font-size: 18px; }
+		.description { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+		.notice {
+			padding: 12px 14px;
+			color: #624b12;
+			background: var(--warning-bg);
+			border: 1px solid var(--warning-line);
+			border-radius: 8px;
+			font-size: 13px;
+			line-height: 1.5;
+		}
+
+		.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+		.field { display: grid; align-content: start; gap: 7px; }
+		.field.full-width { grid-column: 1 / -1; }
+		label, legend { color: var(--ink); font-size: 13px; font-weight: 700; }
+		input[type="time"], input[type="date"], textarea {
+			width: 100%;
+			min-height: 42px;
+			padding: 9px 11px;
+			color: var(--ink);
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			font: inherit;
+			font-size: 14px;
+		}
+		textarea { min-height: 130px; resize: vertical; line-height: 1.5; }
+		#special-note { min-height: 90px; }
+		.faculty-dropdown { position: relative; }
+		.faculty-dropdown-button {
+			display: flex;
+			width: 100%;
+			align-items: center;
+			justify-content: space-between;
+			color: var(--ink);
+			background: #fff;
+			border-color: var(--line);
+			font-weight: 500;
+			text-align: left;
+		}
+		.faculty-dropdown-button:hover { background: #f8fbfa; }
+		.faculty-dropdown-panel {
+			position: absolute;
+			z-index: 2;
+			top: calc(100% + 4px);
+			right: 0;
+			left: 0;
+			max-height: 240px;
+			padding: 6px;
+			overflow-y: auto;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			box-shadow: 0 8px 20px rgb(32 57 49 / 14%);
+		}
+		.faculty-dropdown-panel[hidden] { display: none; }
+		.faculty-option {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 8px;
+			border-radius: 4px;
+			font-size: 13px;
+			font-weight: 500;
+		}
+		.faculty-option:hover { background: #eef5f2; }
+		.faculty-option input { accent-color: var(--green); }
+		#faculty-options:empty::after {
+			display: block;
+			padding: 8px;
+			color: var(--muted);
+			content: "Faculty names are loading…";
+			font-size: 12px;
+		}
+		#faculty-error:not([hidden]) { color: #b42318; }
+		.field input[type="time"], .field input[type="date"] {
+			width: 100%;
+			min-height: 42px;
+			padding: 9px 11px;
+			color: var(--ink);
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			font: inherit;
+			font-size: 14px;
+		}
+		.help { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+		fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+		.radio-options { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 10px 0 12px; }
+		.radio-option { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); font-size: 13px; font-weight: 500; }
+		.radio-option input { accent-color: var(--green); }
+		.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+		button {
+			min-height: 40px;
+			padding: 0 14px;
+			color: #fff;
+			background: var(--green);
+			border: 1px solid var(--green);
+			border-radius: 6px;
+			cursor: pointer;
+			font: inherit;
+			font-size: 13px;
+			font-weight: 700;
+		}
+		button:hover { background: var(--green-dark); }
+		button.secondary { color: var(--green-dark); background: #fff; }
+		button.secondary:hover { background: #eef5f2; }
+		button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+			outline: 3px solid rgb(23 107 104 / 30%);
+			outline-offset: 2px;
+		}
+		#action-status { min-height: 18px; margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+
+		@media (max-width: 640px) {
+			body { padding: 14px 10px; }
+			header, .card { padding: 15px; }
+			.form-grid { grid-template-columns: 1fr; }
+			.field.full-width { grid-column: auto; }
+		}
+		main[hidden] { display: none; }
 	</style>
 </head>
 <body>
 	<div class="page">
-		<header><h1>Telegram</h1><a href="dashboard.html">Dashboard</a></header>
-		<main><h2>Telegram setup</h2><p>This page is ready for the Telegram setup details. No messages or settings are configured yet.</p></main>
+		<header>
+			<h1>Telegram Schedule</h1>
+			<a class="header-button" href="dashboard.html">Dashboard</a>
+		</header>
+
+		<p id="access-status" class="notice" role="status">Checking admin access…</p>
+		<main id="telegram-content" hidden>
+			<section class="card" aria-labelledby="automation-title">
+				<h2 id="automation-title">Automatic next-day schedule</h2>
+				<p class="description">Save the time and message preferences here. When automatic sending is ON, the app sends the next day's bookings only to faculty who have connected their Telegram accounts.</p>
+				<div class="form-grid">
+					<div class="field">
+						<label for="auto-send-time">Daily send time</label>
+						<input id="auto-send-time" type="time">
+						<p class="help">Uses India Standard Time (Asia/Kolkata).</p>
+					</div>
+					<div class="field">
+						<label>Automatic sending</label>
+						<div class="actions">
+							<button id="auto-send-toggle" type="button" aria-pressed="false">Turn automatic sending ON</button>
+							<span id="auto-send-state" class="help">Loading saved settings…</span>
+						</div>
+					</div>
+					<div class="field full-width">
+						<div class="actions">
+							<button id="save-settings-button" class="secondary" type="button">Save Telegram settings</button>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="card" aria-labelledby="faculty-connection-title">
+				<h2 id="faculty-connection-title">Connect faculty Telegram accounts</h2>
+				<p class="description">Create a private start link for each faculty member. Share each link with its matching faculty member; their Telegram account is linked when they open it and press Start.</p>
+				<div class="actions" style="margin-top: 16px">
+					<button id="create-faculty-links" type="button">Create faculty start links</button>
+					<button id="refresh-faculty-status" class="secondary" type="button">Refresh connection status</button>
+					<span id="linked-faculty-status" class="help">Checking linked faculty…</span>
+				</div>
+				<div id="faculty-links" class="form-grid" aria-live="polite"></div>
+			</section>
+
+			<section class="card" aria-labelledby="resend-title">
+				<h2 id="resend-title">Resend a schedule</h2>
+				<p class="description">Choose a schedule date and send it again to the selected recipients.</p>
+				<div class="form-grid">
+					<div class="field">
+						<label for="resend-date">Schedule date</label>
+						<input id="resend-date" type="date">
+					</div>
+					<div class="field">
+						<label for="resend-time">Schedule time</label>
+						<input id="resend-time" type="time">
+						<p class="help">Choose the time for the schedule you want to resend.</p>
+					</div>
+					<div class="field">
+						<label for="recipient-scope">Recipients</label>
+						<fieldset id="recipient-scope">
+							<legend>Who should receive it?</legend>
+							<div class="radio-options">
+								<label class="radio-option"><input type="radio" name="recipient-mode" value="all" checked> All faculty</label>
+								<label class="radio-option"><input type="radio" name="recipient-mode" value="selected"> Selected faculty</label>
+							</div>
+						</fieldset>
+						<div class="field faculty-dropdown" id="selected-faculty-field" hidden>
+							<label id="selected-faculty-label" for="faculty-dropdown-button">Select faculty</label>
+							<button class="faculty-dropdown-button" id="faculty-dropdown-button" type="button" aria-expanded="false" aria-controls="faculty-dropdown-panel">
+								<span id="faculty-dropdown-summary">Choose one or more faculty</span><span aria-hidden="true">▾</span>
+							</button>
+							<div class="faculty-dropdown-panel" id="faculty-dropdown-panel" hidden>
+								<div id="faculty-options" role="group" aria-labelledby="selected-faculty-label"></div>
+							</div>
+						</div>
+						<p id="faculty-help" class="help" hidden>Names come from the same Firebase list used by studio booking. Select one or more names.</p>
+						<p id="faculty-error" class="help" role="alert" hidden></p>
+					</div>
+					<div class="field full-width">
+						<div class="actions">
+							<button id="resend-button" type="button">Resend schedule</button>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="card" aria-labelledby="format-title">
+				<h2 id="format-title">Message format and note</h2>
+				<p class="description">Set the message wording and an optional note for all faculty or a specific group.</p>
+				<div class="form-grid">
+					<div class="field full-width">
+						<label for="message-template">Schedule message template</label>
+						<textarea id="message-template" spellcheck="false">Hello {faculty},
+
+Your studio schedule for {date}:
+{schedule}</textarea>
+						<p class="help">Available placeholders: <code>{faculty}</code>, <code>{date}</code>, and <code>{schedule}</code>.</p>
+					</div>
+					<div class="field full-width">
+						<label for="special-note">Additional note (optional)</label>
+						<textarea id="special-note" placeholder="Write an extra note for all faculty or selected faculty..."></textarea>
+						<p class="help">The note will be added to the schedule message once delivery is connected.</p>
+					</div>
+					<div class="field full-width">
+						<div id="automation-notice" class="notice" role="status">Automatic sending is off. Faculty who have not connected will be skipped. Turning automatic sending on starts the saved daily schedule.</div>
+						<p id="action-status" aria-live="polite"></p>
+					</div>
+				</div>
+			</section>
+		</main>
 	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+		import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+		import { getDatabase, onValue, ref } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyA2sDPaG8p8yXYXDDoF8U6cQDIZ5D5cfnk",
+			authDomain: "studiobookingapp-114a7.firebaseapp.com",
+			databaseURL: "https://studiobookingapp-114a7-default-rtdb.firebaseio.com",
+			projectId: "studiobookingapp-114a7",
+			storageBucket: "studiobookingapp-114a7.firebasestorage.app",
+			messagingSenderId: "356544436239",
+			appId: "1:356544436239:web:d4707344bacbb11afe6b7a",
+			measurementId: "G-ESREKNYNLV"
+		};
+		const rolesByEmail = new Map([
+			["websankul@gmail.com", "Admin"],
+			["ho.websankul@gmail.com", "Faculty"]
+		]);
+		const initialNames = [
+			"RAVI PATEL", "KULDEEPSINH JADEJA", "JENISH DUMASIYA", "DHIREN KHATANA", "PARTH DODIYA",
+			"SATISH KOTAR", "BRIJRAJ GOHIL", "JAL SAGAR", "BHAKTI PATEL", "ATIRATH BHATT",
+			"DARSHIT GOSWAMI", "MANISH SINDHI", "HEMANT HIWARALE", "MITESH RAJPUT", "AKARAM SHERASIYA",
+			"BHARAT NAKUM", "TARUN KATARIYA", "JAY DOBARIYA", "PRASHANT CHAUHAN", "VISHAL SOLANKI",
+			"KAMLESH TOTLANI", "ASHUTOSH RANA", "ABHIJEET ZALA", "NISHANT SHAH", "KANJI KUCHHADIYA",
+			"AJAY KHUNTI", "VIKAS PATEL", "LAKHAN BHATIYA", "ANIL RAKHIYANIYA", "KRUNAL BOCHIYA",
+			"DURGESH CHUAHAN", "PANKAJ RATHOD", "JIGAR PATEL", "BHAVIK RAO", "PRIYA PARMAR", "ROMIL KAVA",
+			"KULDIP PATEL", "SARVAN VAGHELA", "HARDIK CHAVDA", "RUTVIK PATEL", "SANDIP BALWANI",
+			"AKASH JOSHI", "KRUNAL PRAJAPATI", "VICKY BAMANIYA", "JAINIK KHADASALIYA", "KISHAN THUMAR",
+			"NAITIK GADHVI", "KISHAN RADADIYA", "VIJAY NAKIA", "DILIP VARMORA", "ANKIT SORATHIYA",
+			"NANDINI BHATT", "MAULIK PANCHAL", "KARAN VEGHAD", "AMIT BHANUSHALI", "KESHARI SHIH",
+			"VAISHALI VAGHELA", "HARSHIL THAKKAR", "DEMO LECTURE", "WORKING"
+		];
+		const toggle = document.querySelector("#auto-send-toggle");
+		const state = document.querySelector("#auto-send-state");
+		const status = document.querySelector("#action-status");
+		const accessStatus = document.querySelector("#access-status");
+		const telegramContent = document.querySelector("#telegram-content");
+		const selectedFacultyField = document.querySelector("#selected-faculty-field");
+		const selectedFacultyLabel = document.querySelector("#selected-faculty-label");
+		const facultyHelp = document.querySelector("#faculty-help");
+		const facultyError = document.querySelector("#faculty-error");
+		const facultyDropdownButton = document.querySelector("#faculty-dropdown-button");
+		const facultyDropdownPanel = document.querySelector("#faculty-dropdown-panel");
+		const facultyDropdownSummary = document.querySelector("#faculty-dropdown-summary");
+		const facultyOptions = document.querySelector("#faculty-options");
+		const facultyLinks = document.querySelector("#faculty-links");
+		const linkedFacultyStatus = document.querySelector("#linked-faculty-status");
+		const automationNotice = document.querySelector("#automation-notice");
+		let currentUser = null;
+		let facultyNames = [];
+		let savedSelectedFaculty = [];
+		let pendingLinks = {};
+		let linkedFaculty = [];
+
+		async function callTelegram(operation, values = {}) {
+			if (!currentUser) throw new Error("Sign in with the admin account before changing Telegram settings.");
+			const idToken = await currentUser.getIdToken();
+			const requestId = crypto.randomUUID();
+			const frame = document.createElement("iframe");
+			const form = document.createElement("form");
+			frame.name = `telegram-request-${requestId}`;
+			frame.title = "Telegram settings request";
+			frame.hidden = true;
+			form.method = "post";
+			form.action = "https://script.google.com/macros/s/AKfycbxMA_HBB-ZWDdVl7SB1kQi0g48uW1F-wN3BCreQhqPG7L4seTWfErqEh4CRlE3si9H5ig/exec";
+			form.target = frame.name;
+			form.hidden = true;
+			for (const [name, value] of Object.entries({
+				idToken,
+				requestId,
+				payload: JSON.stringify({ operation, ...values })
+			})) {
+				const input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value;
+				form.append(input);
+			}
+			document.body.append(frame, form);
+			return new Promise((resolve, reject) => {
+				const cleanup = () => {
+					window.removeEventListener("message", onMessage);
+					window.clearTimeout(timeout);
+					form.remove();
+					frame.remove();
+				};
+				const onMessage = (event) => {
+					if (event.data?.requestId !== requestId) return;
+					cleanup();
+					if (!event.data.success) {
+						reject(new Error(event.data.message || "Telegram request failed."));
+						return;
+					}
+					try {
+						resolve(JSON.parse(event.data.message || "{}"));
+					} catch (error) {
+						reject(new Error("Telegram service returned an invalid response."));
+					}
+				};
+				const timeout = window.setTimeout(() => {
+					cleanup();
+					reject(new Error("Telegram service did not respond. Check the Apps Script deployment."));
+				}, 20000);
+				window.addEventListener("message", onMessage);
+				form.submit();
+			});
+		}
+
+		function selectedFacultyNames() {
+			return [...facultyOptions.querySelectorAll('input[type="checkbox"]:checked')]
+				.map((checkbox) => checkbox.value);
+		}
+
+		function readSettings() {
+			return {
+				enabled: toggle.getAttribute("aria-pressed") === "true",
+				sendTime: document.querySelector("#auto-send-time").value,
+				recipientMode: document.querySelector('input[name="recipient-mode"]:checked')?.value || "all",
+				selectedFaculty: selectedFacultyNames(),
+				template: document.querySelector("#message-template").value,
+				note: document.querySelector("#special-note").value
+			};
+		}
+
+		function updateToggle(enabled) {
+			toggle.setAttribute("aria-pressed", String(enabled));
+			toggle.textContent = enabled ? "Turn automatic sending OFF" : "Turn automatic sending ON";
+			state.textContent = enabled ? "Automatic sending: ON" : "Automatic sending: OFF";
+		}
+
+		function renderTelegramState(result) {
+			const config = result.config || {};
+			document.querySelector("#auto-send-time").value = config.sendTime || "18:00";
+			document.querySelector("#message-template").value = config.template
+				|| "Hello {faculty},\n\nYour studio schedule for {date}:\n{schedule}";
+			document.querySelector("#special-note").value = config.note || "";
+			const mode = config.recipientMode === "selected" ? "selected" : "all";
+			savedSelectedFaculty = Array.isArray(config.selectedFaculty) ? config.selectedFaculty : [];
+			const recipientRadio = document.querySelector(`input[name="recipient-mode"][value="${mode}"]`);
+			if (recipientRadio) recipientRadio.checked = true;
+			selectedFacultyField.hidden = mode !== "selected";
+			facultyHelp.hidden = mode !== "selected";
+			updateToggle(config.enabled === true);
+			automationNotice.textContent = config.enabled === true
+				? "Automatic sending is ON. Each day, the next-day schedule goes only to connected faculty. Unconnected faculty are skipped."
+				: "Automatic sending is off. Faculty who have not connected will be skipped. Turning automatic sending on starts the saved daily schedule.";
+			linkedFaculty = Array.isArray(result.linkedFaculty) ? result.linkedFaculty : [];
+			pendingLinks = result.pendingLinks && typeof result.pendingLinks === "object" ? result.pendingLinks : {};
+			renderLinkedStatus();
+			renderFacultyLinks();
+		}
+
+		function renderLinkedStatus() {
+			linkedFacultyStatus.textContent = `${linkedFaculty.length} faculty account${linkedFaculty.length === 1 ? "" : "s"} connected. Unconnected faculty will be skipped.`;
+		}
+
+		function renderFacultyLinks() {
+			facultyLinks.replaceChildren();
+			for (const name of facultyNames) {
+				const url = pendingLinks[name];
+				const field = document.createElement("div");
+				field.className = "field";
+				const label = document.createElement("label");
+				const isLinked = linkedFaculty.includes(name);
+				label.textContent = `${name}${isLinked ? " — connected" : " — not connected"}`;
+				const actions = document.createElement("div");
+				actions.className = "actions";
+				if (isLinked) {
+					const connected = document.createElement("span");
+					connected.className = "help";
+					connected.textContent = "Telegram account connected";
+					actions.append(connected);
+				} else if (url) {
+					const link = document.createElement("a");
+					link.href = url;
+					link.target = "_blank";
+					link.rel = "noopener noreferrer";
+					link.textContent = "Open faculty start link";
+					link.className = "help";
+					const copy = document.createElement("button");
+					copy.type = "button";
+					copy.className = "secondary";
+					copy.textContent = "Copy link";
+					copy.addEventListener("click", async () => {
+						try {
+							await navigator.clipboard.writeText(url);
+							status.textContent = `Copied the private start link for ${name}.`;
+						} catch (error) {
+							status.textContent = "Could not copy the link. Open it and copy it from the address bar.";
+							console.error("Could not copy Telegram invite link:", error);
+						}
+					});
+					actions.append(link, copy);
+				} else {
+					const waiting = document.createElement("span");
+					waiting.className = "help";
+					waiting.textContent = "Create a start link to connect this faculty member.";
+					actions.append(waiting);
+				}
+				field.append(label, actions);
+				facultyLinks.append(field);
+			}
+		}
+
+		async function saveSettings() {
+			status.textContent = "Saving Telegram settings…";
+			try {
+				const result = await callTelegram("telegramSaveSettings", { settings: readSettings() });
+				renderTelegramState(result);
+				status.textContent = "Telegram settings saved.";
+			} catch (error) {
+				status.textContent = `Could not save Telegram settings: ${error.message}`;
+				console.error("Telegram settings save failed:", error);
+				throw error;
+			}
+		}
+
+		function showFacultyNameError(error) {
+			facultyOptions.replaceChildren();
+			facultyError.textContent = "Could not load the booking faculty list. Check Firebase Database Rules and refresh this page.";
+			facultyError.hidden = false;
+			console.error("Could not load Telegram recipient names:", error);
+		}
+
+		function renderFacultyNames(names) {
+			facultyNames = names;
+			const selectedNames = new Set([...facultyOptions.querySelectorAll('input[type="checkbox"]:checked')]
+				.map((checkbox) => checkbox.value));
+			for (const name of savedSelectedFaculty) selectedNames.add(name);
+			facultyOptions.replaceChildren();
+			for (const name of names) {
+				const label = document.createElement("label");
+				label.className = "faculty-option";
+				const checkbox = document.createElement("input");
+				checkbox.type = "checkbox";
+				checkbox.value = name;
+				checkbox.checked = selectedNames.has(name);
+				const text = document.createElement("span");
+				text.textContent = name;
+				label.append(checkbox, text);
+				facultyOptions.append(label);
+			}
+			facultyError.hidden = true;
+			facultyDropdownButton.disabled = names.length === 0;
+			updateFacultyDropdownSummary();
+			renderFacultyLinks();
+		}
+
+		function updateFacultyDropdownSummary() {
+			const selectedNames = [...facultyOptions.querySelectorAll('input[type="checkbox"]:checked')]
+				.map((checkbox) => checkbox.value);
+			savedSelectedFaculty = selectedNames;
+			facultyDropdownSummary.textContent = selectedNames.length
+				? `${selectedNames.length} faculty selected`
+				: "Choose one or more faculty";
+		}
+
+		document.querySelectorAll('input[name="recipient-mode"]').forEach((radio) => {
+			radio.addEventListener("change", (event) => {
+				const useSelection = event.currentTarget.checked && event.currentTarget.value === "selected";
+				selectedFacultyField.hidden = !useSelection;
+				facultyHelp.hidden = !useSelection;
+				facultyError.hidden = !useSelection;
+			});
+		});
+
+		facultyDropdownButton.addEventListener("click", () => {
+			const isOpening = facultyDropdownPanel.hidden;
+			facultyDropdownPanel.hidden = !isOpening;
+			facultyDropdownButton.setAttribute("aria-expanded", String(isOpening));
+		});
+		facultyOptions.addEventListener("change", () => {
+			savedSelectedFaculty = selectedFacultyNames();
+			updateFacultyDropdownSummary();
+		});
+		document.addEventListener("pointerdown", (event) => {
+			if (!selectedFacultyField.contains(event.target)) {
+				facultyDropdownPanel.hidden = true;
+				facultyDropdownButton.setAttribute("aria-expanded", "false");
+			}
+		});
+
+		document.querySelector("#save-settings-button").addEventListener("click", async () => {
+			try {
+				await saveSettings();
+			} catch (error) {
+				return;
+			}
+		});
+
+		toggle.addEventListener("click", async () => {
+			const enabled = toggle.getAttribute("aria-pressed") !== "true";
+			updateToggle(enabled);
+			try { await saveSettings(); } catch (error) { updateToggle(!enabled); }
+		});
+
+		document.querySelector("#create-faculty-links").addEventListener("click", async () => {
+			const names = document.querySelector('input[name="recipient-mode"]:checked')?.value === "selected"
+				? selectedFacultyNames()
+				: facultyNames;
+			status.textContent = "Creating private faculty start links…";
+			try {
+				const result = await callTelegram("telegramCreateLinks", { facultyNames: names });
+				pendingLinks = result.links || {};
+				renderFacultyLinks();
+				status.textContent = `Created ${Object.keys(pendingLinks).length} faculty start link(s). Share each only with its matching faculty member.`;
+			} catch (error) {
+				status.textContent = `Could not create faculty links: ${error.message}`;
+				console.error("Telegram faculty link generation failed:", error);
+			}
+		});
+
+		document.querySelector("#refresh-faculty-status").addEventListener("click", async () => {
+			status.textContent = "Refreshing faculty connections…";
+			try {
+				renderTelegramState(await callTelegram("telegramGetState"));
+				status.textContent = "Faculty connection status refreshed.";
+			} catch (error) {
+				status.textContent = `Could not refresh faculty connections: ${error.message}`;
+				console.error("Telegram faculty status refresh failed:", error);
+			}
+		});
+
+		document.querySelector("#resend-button").addEventListener("click", async () => {
+			const scheduleDate = document.querySelector("#resend-date").value;
+			const scheduleTime = document.querySelector("#resend-time").value;
+			if (!scheduleDate) {
+				status.textContent = "Choose a schedule date first.";
+				return;
+			}
+			if (!scheduleTime) {
+				status.textContent = "Choose a schedule time first.";
+				return;
+			}
+			status.textContent = "Sending the selected schedule to connected faculty…";
+			try {
+				const result = await callTelegram("telegramResend", {
+					scheduleDate,
+					settings: { ...readSettings(), scheduleTime }
+				});
+				status.textContent = `Schedule sent to ${Number(result.sent) || 0} connected faculty.`;
+			} catch (error) {
+				status.textContent = `Could not resend the schedule: ${error.message}`;
+				console.error("Telegram schedule resend failed:", error);
+			}
+		});
+
+		const app = initializeApp(firebaseConfig);
+		const auth = getAuth(app);
+		const database = getDatabase(app);
+		setPersistence(auth, browserLocalPersistence).then(() => {
+			onAuthStateChanged(auth, async (user) => {
+				if (!user) {
+					window.location.replace("loginpage.html");
+					return;
+				}
+				const role = user.email ? rolesByEmail.get(user.email.toLowerCase()) : undefined;
+				if (role !== "Admin") {
+					accessStatus.textContent = "Only Admin can access Telegram schedule settings.";
+					return;
+				}
+
+				accessStatus.hidden = true;
+				telegramContent.hidden = false;
+				currentUser = user;
+				try {
+					renderTelegramState(await callTelegram("telegramGetState"));
+				} catch (error) {
+					state.textContent = "Could not load saved Telegram settings.";
+					status.textContent = `Telegram service error: ${error.message}`;
+					console.error("Telegram settings load failed:", error);
+				}
+				onValue(ref(database, "bookingNames"), (snapshot) => {
+					const list = snapshot.val();
+					if (list?.initialized === true) {
+						const entries = list.entries && typeof list.entries === "object" ? list.entries : {};
+						renderFacultyNames([...new Set(Object.values(entries).filter((name) => typeof name === "string"))]
+							.sort((first, second) => first.localeCompare(second)));
+					} else {
+						renderFacultyNames(initialNames);
+					}
+				}, showFacultyNameError);
+			}, (error) => {
+				accessStatus.textContent = "Could not verify Admin access. Refresh the page or sign in again.";
+				console.error("Firebase Telegram page authentication state failed:", error);
+			});
+		}).catch((error) => {
+			accessStatus.textContent = "Could not keep your sign-in session. Check browser storage settings.";
+			console.error("Could not set Telegram page auth persistence:", error);
+		});
+	</script>
 </body>
 </html>
