@@ -142,7 +142,7 @@
 			display: block;
 			padding: 8px;
 			color: var(--muted);
-			content: "Faculty names are loading…";
+			content: "Faculty names are loadingâ€¦";
 			font-size: 12px;
 		}
 		#faculty-error:not([hidden]) { color: #b42318; }
@@ -200,7 +200,7 @@
 			<a class="header-button" href="dashboard.html">Dashboard</a>
 		</header>
 
-		<p id="access-status" class="notice" role="status">Checking admin access…</p>
+		<p id="access-status" class="notice" role="status">Checking admin accessâ€¦</p>
 		<main id="telegram-content" hidden>
 			<section class="card" aria-labelledby="automation-title">
 				<h2 id="automation-title">Automatic next-day schedule</h2>
@@ -215,7 +215,7 @@
 						<label>Automatic sending</label>
 						<div class="actions">
 							<button id="auto-send-toggle" type="button" aria-pressed="false">Turn automatic sending ON</button>
-							<span id="auto-send-state" class="help">Loading saved settings…</span>
+							<span id="auto-send-state" class="help">Loading saved settingsâ€¦</span>
 						</div>
 					</div>
 					<div class="field full-width">
@@ -232,7 +232,7 @@
 				<div class="actions" style="margin-top: 16px">
 					<button id="create-faculty-links" type="button">Create faculty start links</button>
 					<button id="refresh-faculty-status" class="secondary" type="button">Refresh connection status</button>
-					<span id="linked-faculty-status" class="help">Checking linked faculty…</span>
+					<span id="linked-faculty-status" class="help">Checking linked facultyâ€¦</span>
 				</div>
 				<div id="faculty-links" class="form-grid" aria-live="polite"></div>
 			</section>
@@ -262,7 +262,7 @@
 						<div class="field faculty-dropdown" id="selected-faculty-field" hidden>
 							<label id="selected-faculty-label" for="faculty-dropdown-button">Select faculty</label>
 							<button class="faculty-dropdown-button" id="faculty-dropdown-button" type="button" aria-expanded="false" aria-controls="faculty-dropdown-panel">
-								<span id="faculty-dropdown-summary">Choose one or more faculty</span><span aria-hidden="true">▾</span>
+								<span id="faculty-dropdown-summary">Choose one or more faculty</span><span aria-hidden="true">â–¾</span>
 							</button>
 							<div class="faculty-dropdown-panel" id="faculty-dropdown-panel" hidden>
 								<div id="faculty-options" role="group" aria-labelledby="selected-faculty-label"></div>
@@ -470,7 +470,7 @@ Your studio schedule for {date}:
 				field.className = "field";
 				const label = document.createElement("label");
 				const isLinked = linkedFaculty.includes(name);
-				label.textContent = `${name}${isLinked ? " — connected" : " — not connected"}`;
+				label.textContent = `${name}${isLinked ? " â€” connected" : " â€” not connected"}`;
 				const actions = document.createElement("div");
 				actions.className = "actions";
 				if (isLinked) {
@@ -511,7 +511,7 @@ Your studio schedule for {date}:
 		}
 
 		async function saveSettings() {
-			status.textContent = "Saving Telegram settings…";
+			status.textContent = "Saving Telegram settingsâ€¦";
 			try {
 				const result = await callTelegram("telegramSaveSettings", { settings: readSettings() });
 				renderTelegramState(result);
@@ -606,7 +606,7 @@ Your studio schedule for {date}:
 			const names = document.querySelector('input[name="recipient-mode"]:checked')?.value === "selected"
 				? selectedFacultyNames()
 				: facultyNames;
-			status.textContent = "Creating private faculty start links…";
+			status.textContent = "Creating private faculty start linksâ€¦";
 			try {
 				const result = await callTelegram("telegramCreateLinks", { facultyNames: names });
 				pendingLinks = result.links || {};
@@ -619,9 +619,9 @@ Your studio schedule for {date}:
 		});
 
 		document.querySelector("#refresh-faculty-status").addEventListener("click", async () => {
-			status.textContent = "Refreshing faculty connections…";
+			status.textContent = "Refreshing faculty connectionsâ€¦";
 			try {
-				renderTelegramState(await callTelegram("telegramGetState"));
+				renderTelegramState(await callTelegram("telegramRefreshConnections"));
 				status.textContent = "Faculty connection status refreshed.";
 			} catch (error) {
 				status.textContent = `Could not refresh faculty connections: ${error.message}`;
@@ -640,7 +640,7 @@ Your studio schedule for {date}:
 				status.textContent = "Choose a schedule time first.";
 				return;
 			}
-			status.textContent = "Sending the selected schedule to connected faculty…";
+			status.textContent = "Sending the selected schedule to connected facultyâ€¦";
 			try {
 				const result = await callTelegram("telegramResend", {
 					scheduleDate,
