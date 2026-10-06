@@ -499,6 +499,23 @@ Your studio schedule for {date}:
 						}
 					});
 					actions.append(link, copy);
+					const inviteCode = new URL(url).searchParams.get("start");
+					if (inviteCode) {
+						const copyCommand = document.createElement("button");
+						copyCommand.type = "button";
+						copyCommand.className = "secondary";
+						copyCommand.textContent = "Copy /start command";
+						copyCommand.addEventListener("click", async () => {
+							try {
+								await navigator.clipboard.writeText(`/start ${inviteCode}`);
+								status.textContent = `Copied the private Telegram command for ${name}. Paste it into that faculty member's bot chat and send it.`;
+							} catch (error) {
+								status.textContent = "Could not copy the Telegram command. Copy the faculty link again and open it in Telegram.";
+								console.error("Could not copy Telegram start command:", error);
+							}
+						});
+						actions.append(copyCommand);
+					}
 				} else {
 					const waiting = document.createElement("span");
 					waiting.className = "help";
