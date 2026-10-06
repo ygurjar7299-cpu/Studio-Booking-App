@@ -180,6 +180,29 @@
 		.studio-add-controls input { width: 100%; min-height: 38px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
 		.studio-management-status { min-height: 16px; margin: 10px 0 0; color: var(--muted); font-size: 12px; }
 		.studio-management-status.error { color: #b42318; }
+		.timetable-preview-wrap { overflow-x: auto; margin-top: 14px; }
+		.timetable-preview { min-width: 1050px; }
+		.timetable-preview input, .timetable-preview select { width: 100%; min-width: 90px; min-height: 36px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+		.timetable-preview .timetable-include { width: 18px; min-width: 18px; min-height: 18px; }
+		.timetable-warning { min-width: 180px; color: #9a3412; font-weight: 500; }
+		.timetable-warning.error { color: #b42318; }
+		.timetable-preview-status { min-height: 18px; margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+		.timetable-preview-status.error { color: #b42318; }
+		.timetable-preview-status.success { color: #176b42; }
+		.timetable-batch-picker { position: relative; }
+		.timetable-batch-picker summary { min-height: 38px; padding: 9px; color: #4b5563; background: #fff; border: 1px solid var(--line); border-radius: 5px; cursor: pointer; font-size: 12px; }
+		.timetable-batch-options { display: grid; gap: 8px; max-height: 220px; overflow-y: auto; margin-top: 5px; padding: 10px; background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+		.timetable-batch-option { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+		.timetable-batch-option input { width: 16px; min-height: 16px; }
+		.timetable-add-batch { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
+		.timetable-add-batch input { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+		.timetable-add-batch button { min-height: 36px; padding: 0 10px; color: #fff; background: #176b68; border: 0; border-radius: 5px; cursor: pointer; }
+		.timetable-preview-help { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+		.timetable-processing { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 12px; color: #145b58; background: #eef8f6; border: 1px solid #cfe7e3; border-radius: 7px; font-size: 13px; }
+		.timetable-processing[hidden] { display: none; }
+		.timetable-processing-spinner { width: 18px; height: 18px; flex: 0 0 18px; border: 3px solid #b8d9d4; border-top-color: #176b68; border-radius: 50%; animation: timetable-spin 800ms linear infinite; }
+		.timetable-processing progress { width: min(180px, 25vw); height: 10px; accent-color: #176b68; }
+		@keyframes timetable-spin { to { transform: rotate(360deg); } }
 
 		.studio-section {
 			margin: 0 0 14px;
@@ -278,7 +301,8 @@
 			<h1 class="brand" id="welcome-heading">Welcome</h1>
 			<nav class="header-actions" aria-label="Dashboard navigation">
 				<a class="header-button" href="dashboard.html">Dashboard</a>
-				<button id="sign-out-button" type="button">Sign out</button> 				<a class="header-button" id="telegram-button" href="telegram.html" hidden>Telegram</a>
+				<button id="sign-out-button" type="button">Sign out</button>
+				<a class="header-button" id="telegram-button" href="telegram.html" hidden>Telegram</a>
 			</nav>
 		</header>
 		<main id="main-dashboard">
@@ -329,6 +353,36 @@
 				</div>
 				<p class="range-result" id="google-sheet-status" role="status"></p>
 			</section>
+			<section class="range-section admin-tools" id="timetable-upload-tools" hidden>
+				<h2>Upload Timetable PDF</h2>
+				<p>The PDF is read in this browser only; it is not uploaded or saved by the app. After reading, the upload is cleared and only the editable preview remains. Check and correct the parsed lectures, conflicts, date, faculty, subject, time, batch, and studio before confirming. New bookings default to Studio 1; the Test column is ignored.</p>
+				<div class="range-controls">
+					<label for="timetable-pdf">Timetable PDF<input id="timetable-pdf" type="file" accept="application/pdf,.pdf"></label>
+					<div>
+						<label for="timetable-batch-dropdown">Application Live batch(es)</label>
+						<details class="timetable-batch-picker" id="timetable-batch-dropdown">
+							<summary id="timetable-batch-summary">Select one or more batches</summary>
+							<div class="timetable-batch-options" id="timetable-batch-options"></div>
+						</details>
+						<div class="timetable-add-batch">
+							<input id="timetable-new-batch" type="text" maxlength="120" placeholder="Add a new batch name" aria-label="New Application Live batch name">
+							<button id="add-timetable-batch" type="button">Add batch</button>
+						</div>
+					</div>
+				</div>
+				<p class="timetable-preview-help">Tick “Book this lecture” to include it in the confirmation. Untick it to skip that lecture. Select one or more batches; a new batch name is added to the list when bookings are confirmed.</p>
+				<div id="timetable-preview-container" class="timetable-preview-wrap" hidden></div>
+				<div class="range-controls" id="timetable-confirm-controls" hidden>
+					<button class="range-button export-button" id="confirm-timetable-bookings" type="button">Confirm selected bookings</button>
+					<button class="range-button" id="cancel-timetable-preview" type="button">Cancel preview</button>
+				</div>
+				<div class="timetable-processing" id="timetable-processing" role="status" aria-live="polite" hidden>
+					<span class="timetable-processing-spinner" aria-hidden="true"></span>
+					<span id="timetable-processing-text">Processing bookings…</span>
+					<progress id="timetable-processing-progress" value="0" max="1" aria-label="Booking progress"></progress>
+				</div>
+				<p class="timetable-preview-status" id="timetable-preview-status" role="status" aria-live="polite"></p>
+			</section>
 		</main>
 		<div id="action-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 		<dialog id="edit-booking-dialog" aria-labelledby="edit-booking-title">
@@ -336,6 +390,7 @@
 				<h2 id="edit-booking-title">Edit Booking</h2>
 				<div class="edit-booking-fields">
 					<label>Name<input id="edit-booking-name" name="name" type="text" maxlength="100" required></label>
+					<label>Studio<select id="edit-booking-studio" name="studioKey" required></select></label>
 					<label>Date<input id="edit-booking-date" name="date" type="date" required></label>
 					<label>Start Time<select id="edit-booking-start-time" name="startTime" required></select></label>
 					<label>End Time<select id="edit-booking-end-time" name="endTime" required></select></label>
@@ -373,7 +428,7 @@
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 		import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-		import { endAt, equalTo, get, getDatabase, onValue, orderByChild, query, ref, remove, runTransaction, startAt, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+		import { endAt, equalTo, get, getDatabase, onValue, orderByChild, push, query, ref, remove, runTransaction, set, startAt, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
 		const firebaseConfig = {
 			apiKey: "AIzaSyA2sDPaG8p8yXYXDDoF8U6cQDIZ5D5cfnk",
@@ -552,11 +607,11 @@
 		function bookingSlotKeys(startTime, endTime) {
 			const start = bookingTimeMinutes(startTime);
 			const end = bookingTimeMinutes(endTime);
-			if (!Number.isFinite(start) || !Number.isFinite(end) || start % 30 !== 0 || end % 30 !== 0 || end <= start) {
-				throw new Error("Use valid start and end times in 30-minute increments.");
+			if (!Number.isFinite(start) || !Number.isFinite(end) || start % 15 !== 0 || end % 15 !== 0 || end <= start) {
+				throw new Error("Use valid start and end times in 15-minute increments.");
 			}
 			const keys = [];
-			for (let minute = start; minute < end; minute += 30) {
+			for (let minute = start; minute < end; minute += 15) {
 				keys.push(`${String(Math.floor(minute / 60)).padStart(2, "0")}-${String(minute % 60).padStart(2, "0")}`);
 			}
 			return keys;
@@ -570,7 +625,7 @@
 			const start = bookingTimeMinutes(booking.startTime || booking.time);
 			const end = bookingTimeMinutes(booking.endTime);
 			return Number.isFinite(start) && Number.isFinite(end)
-				&& start < slotStart + 30 && slotStart < end;
+				&& start < slotStart + 15 && slotStart < end;
 		}
 
 		async function clearStaleBookingSlot(slotRef, previous, date, slotKey, ownerStudio, ownerKey, facultyName = "") {
@@ -599,7 +654,7 @@
 			return `faculty-${Array.from(new TextEncoder().encode(normalized), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 		}
 
-		async function reserveBookingSlots(studioKey, booking, bookingId, excludedBookingKey = "") {
+		async function reserveBookingSlots(studioKey, booking, bookingId, excludedBookingKey = "", excludedBookingId = "") {
 			const requestedStart = bookingTimeMinutes(booking.startTime);
 			const requestedEnd = bookingTimeMinutes(booking.endTime);
 			const normalizedFaculty = normalizeFacultyName(booking.name);
@@ -615,6 +670,7 @@
 			for (const { studio, bookings } of bookingsByStudio) {
 				const conflict = Object.entries(bookings).some(([key, existing]) => {
 					if (!existing || (studio.key === studioKey && key === excludedBookingKey) || `${studio.key}/${key}` === bookingId
+						|| (excludedBookingId && `${studio.key}/${key}` === excludedBookingId)
 						|| existing.date !== booking.date) return false;
 					if (studio.key !== studioKey && normalizeFacultyName(existing.name) !== normalizedFaculty) return false;
 					const existingStart = bookingTimeMinutes(existing.startTime || existing.time);
@@ -631,12 +687,14 @@
 				}
 			}
 
-			const reservation = { legacy: [], faculty: [], facultyKey };
+			const reservation = { legacy: [], faculty: [], facultyReplaced: [], facultyKey };
 			try {
 				const slotResults = await Promise.allSettled(bookingSlotKeys(booking.startTime, booking.endTime).map(async (slotKey) => {
 					const facultySlotRef = ref(database, `facultyBookingSlots/${booking.date}/${facultyKey}/${slotKey}`);
 					const facultyPrevious = await get(facultySlotRef);
 					const facultyAlreadyOwned = facultyPrevious.child("bookingId").val() === bookingId;
+					const facultyOwnedByExcluded = Boolean(excludedBookingId)
+						&& facultyPrevious.child("bookingId").val() === excludedBookingId;
 					if (facultyPrevious.exists() && !facultyAlreadyOwned) {
 						const ownerId = String(facultyPrevious.child("bookingId").val() || "");
 						const separator = ownerId.indexOf("/");
@@ -647,7 +705,7 @@
 						);
 					}
 					const facultyResult = await runTransaction(facultySlotRef, (current) => {
-						if (current === null) {
+						if (current === null || current?.bookingId === excludedBookingId && excludedBookingId) {
 							return { bookingId, userId: booking.userId, studioKey, facultyName: normalizedFaculty, reservedAt: Date.now() };
 						}
 						if (current.bookingId === bookingId) return current;
@@ -660,7 +718,12 @@
 							|| "another studio";
 						throw new Error(`${booking.name} already has a booking in ${conflictingStudio} at that time. Choose another time.`);
 					}
-					if (!facultyAlreadyOwned) reservation.faculty.push(slotKey);
+					if (!facultyAlreadyOwned) {
+						reservation.faculty.push(slotKey);
+						if (facultyOwnedByExcluded) {
+							reservation.facultyReplaced.push({ slotKey, previous: facultyPrevious.val() });
+						}
+					}
 
 					const slotRef = ref(database, `bookingSlots/${studioKey}/${booking.date}/${slotKey}`);
 					const previous = await get(slotRef);
@@ -686,8 +749,18 @@
 				if (failedSlot) throw failedSlot.reason;
 				return reservation;
 			} catch (error) {
+				await restoreTransferredFacultySlots(booking.date, reservation, bookingId);
 				await releaseBookingSlots(studioKey, booking.date, reservation, bookingId);
 				throw error;
+			}
+		}
+
+		async function restoreTransferredFacultySlots(date, reservation, bookingId) {
+			for (const entry of reservation.facultyReplaced || []) {
+				const slotRef = ref(database, `facultyBookingSlots/${date}/${reservation.facultyKey}/${entry.slotKey}`);
+				await runTransaction(slotRef, (current) =>
+					current?.bookingId === bookingId ? entry.previous : undefined
+				);
 			}
 		}
 
@@ -1147,6 +1220,772 @@
 			return results.flat();
 		}
 
+		const timetableFileInput = document.querySelector("#timetable-pdf");
+		const timetableBatchOptions = document.querySelector("#timetable-batch-options");
+		const timetableBatchSummary = document.querySelector("#timetable-batch-summary");
+		const timetableNewBatchInput = document.querySelector("#timetable-new-batch");
+		const timetableBatchDropdown = document.querySelector("#timetable-batch-dropdown");
+		const timetablePreviewContainer = document.querySelector("#timetable-preview-container");
+		const timetablePreviewStatus = document.querySelector("#timetable-preview-status");
+		const timetableConfirmControls = document.querySelector("#timetable-confirm-controls");
+		const timetableConfirmButton = document.querySelector("#confirm-timetable-bookings");
+		const timetableCancelButton = document.querySelector("#cancel-timetable-preview");
+		const timetableProcessing = document.querySelector("#timetable-processing");
+		const timetableProcessingText = document.querySelector("#timetable-processing-text");
+		const timetableProcessingProgress = document.querySelector("#timetable-processing-progress");
+		const timetableInitialBatches = [
+			"CCE Group A & B MAINS Live Batch - સુલેખન",
+			"Vanpal & Vanrakshak 2.O Live Batch - વનસારથિ"
+		];
+		let timetablePdfJsPromise = null;
+		let timetableExistingBookings = [];
+		let timetableBatchNames = [...timetableInitialBatches];
+		let timetableProcessingControls = [];
+
+		function setTimetableProcessing(processing, message = "", total = 0, completed = 0) {
+			const alreadyProcessing = !timetableProcessing.hidden;
+			timetableProcessing.hidden = !processing;
+			timetableProcessingText.textContent = message;
+			timetableProcessingProgress.max = Math.max(total, 1);
+			timetableProcessingProgress.value = Math.min(completed, total);
+			if (processing) {
+				timetableProcessing.setAttribute("aria-busy", "true");
+				if (alreadyProcessing) return;
+				const controls = [
+					timetableFileInput,
+					timetableNewBatchInput,
+					document.querySelector("#add-timetable-batch"),
+					timetableConfirmButton,
+					timetableCancelButton,
+					...timetablePreviewContainer.querySelectorAll("input, select"),
+					...timetableBatchOptions.querySelectorAll("input")
+				];
+				timetableProcessingControls = controls.map((control) => ({
+					control,
+					wasDisabled: control.disabled
+				}));
+				controls.forEach((control) => { control.disabled = true; });
+			} else {
+				timetableProcessing.removeAttribute("aria-busy");
+				timetableProcessingControls.forEach(({ control, wasDisabled }) => {
+					control.disabled = wasDisabled;
+				});
+				timetableProcessingControls = [];
+				const rows = [...timetablePreviewContainer.querySelectorAll("tbody tr")];
+				timetableConfirmButton.disabled = !rows.some((row) =>
+					row.querySelector(".timetable-include").checked
+					&& row.dataset.saved !== "true"
+				) || rows.some((row) => row.dataset.blocking === "true");
+			}
+		}
+
+		async function allowTimetableProcessingPaint() {
+			await new Promise((resolve) => window.requestAnimationFrame(() =>
+				window.requestAnimationFrame(resolve)
+			));
+		}
+
+		function resetTimetablePreviewAfterCompletion() {
+			timetableFileInput.value = "";
+			timetableNewBatchInput.value = "";
+			timetablePreviewContainer.replaceChildren();
+			timetablePreviewContainer.hidden = true;
+			timetableConfirmControls.hidden = true;
+			timetableExistingBookings = [];
+			renderTimetableBatchOptions([]);
+		}
+
+		function setTimetableStatus(message, isError = false, isSuccess = false) {
+			timetablePreviewStatus.textContent = message;
+			timetablePreviewStatus.classList.toggle("error", isError);
+			timetablePreviewStatus.classList.toggle("success", isSuccess);
+		}
+
+		function normalizeTimetableDigits(value) {
+			const gujaratiDigits = "૦૧૨૩૪૫૬૭૮૯";
+			return String(value).replace(/[૦-૯]/g, (digit) => String(gujaratiDigits.indexOf(digit)));
+		}
+
+		function displayTimetableDate(isoDate) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate || ""));
+			return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+		}
+
+		function normalizeTimetableDate(displayDate) {
+			const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(normalizeTimetableDigits(displayDate).trim());
+			if (!match) return "";
+			const day = Number(match[1]);
+			const month = Number(match[2]);
+			const year = Number(match[3]);
+			const date = new Date(year, month - 1, day);
+			if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return "";
+			return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+		}
+
+		function selectedTimetableBatchNames() {
+			return [...timetableBatchOptions.querySelectorAll('input[type="checkbox"]:checked')]
+				.map((checkbox) => checkbox.value);
+		}
+
+		function updateTimetableBatchSummary() {
+			const selected = selectedTimetableBatchNames();
+			timetableBatchSummary.textContent = selected.length
+				? `${selected.length} batch${selected.length === 1 ? "" : "es"} selected`
+				: "Select one or more batches";
+		}
+
+		function renderTimetableBatchOptions(selectedNames = selectedTimetableBatchNames()) {
+			const selected = new Set(selectedNames.map(normalizeSheetText));
+			timetableBatchOptions.replaceChildren();
+			timetableBatchNames.forEach((batchName) => {
+				const label = document.createElement("label");
+				label.className = "timetable-batch-option";
+				const checkbox = document.createElement("input");
+				checkbox.type = "checkbox";
+				checkbox.value = batchName;
+				checkbox.checked = selected.has(normalizeSheetText(batchName));
+				checkbox.addEventListener("change", () => {
+					updateTimetableBatchSummary();
+					refreshTimetablePreviewConflicts();
+				});
+				const text = document.createElement("span");
+				text.textContent = batchName;
+				label.append(checkbox, text);
+				timetableBatchOptions.append(label);
+			});
+			updateTimetableBatchSummary();
+		}
+
+		async function loadTimetableBatchNames() {
+			const snapshot = await get(ref(database, "applicationLiveBatches"));
+			const value = snapshot.val();
+			const entries = value?.initialized === true && value.entries && typeof value.entries === "object"
+				? Object.values(value.entries).filter((entry) => typeof entry === "string" && entry.trim())
+				: [];
+			timetableBatchNames = [...timetableInitialBatches];
+			entries.forEach((entry) => {
+				if (!timetableBatchNames.some((existing) => normalizeSheetText(existing) === normalizeSheetText(entry))) {
+					timetableBatchNames.push(entry.trim());
+				}
+			});
+			renderTimetableBatchOptions();
+		}
+
+		function addTimetableBatch(batchName, select = true) {
+			const normalized = String(batchName || "").trim().replace(/\s+/g, " ");
+			if (!normalized) return false;
+			let existingName = timetableBatchNames.find((existing) => normalizeSheetText(existing) === normalizeSheetText(normalized));
+			if (!existingName) {
+				timetableBatchNames.push(normalized);
+				existingName = normalized;
+			}
+			const selected = selectedTimetableBatchNames();
+			if (select && !selected.some((entry) => normalizeSheetText(entry) === normalizeSheetText(existingName))) {
+				selected.push(existingName);
+			}
+			renderTimetableBatchOptions(selected);
+			return true;
+		}
+
+		renderTimetableBatchOptions([]);
+
+		function timetableCellLines(items, minX, maxX) {
+			const selected = items.filter((item) => {
+				const center = item.x + item.width / 2;
+				return center >= minX && center < maxX && item.text.length > 0;
+			});
+			const lines = [];
+			selected.forEach((item) => {
+				let line = lines.find((entry) => Math.abs(entry.y - item.y) <= 2.5);
+				if (!line) {
+					line = { y: item.y, items: [] };
+					lines.push(line);
+				}
+				line.items.push(item);
+			});
+			return lines.map((line) => ({
+				y: line.y,
+				text: line.items.sort((first, second) => first.x - second.x)
+					.map((item) => item.text)
+					.join("")
+					.replace(/\s+/g, " ")
+					.trim()
+			})).sort((first, second) => second.y - first.y);
+		}
+
+		function parseTimetableDate(value) {
+			const normalized = normalizeTimetableDigits(value).replace(/\s+/g, "");
+			const match = normalized.match(/(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})/);
+			if (!match) return null;
+			const day = Number(match[1]);
+			const month = Number(match[2]);
+			const year = Number(match[3]);
+			const date = new Date(year, month - 1, day);
+			if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+			return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+		}
+
+		function timetableTimeMinutes(value) {
+			const match = normalizeTimetableDigits(value).match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+			if (!match) return null;
+			let hour = Number(match[1]);
+			const minute = Number(match[2] || "0");
+			const suffix = String(match[3] || "").toUpperCase();
+			if (hour > 23 || minute > 59) return null;
+			if (suffix === "PM" && hour < 12) hour += 12;
+			if (suffix === "AM" && hour === 12) hour = 0;
+			return hour * 60 + minute;
+		}
+
+		function parseTimetableTimeRange(value) {
+			const normalized = normalizeTimetableDigits(value);
+			const match = normalized.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)?)\s*(?:TO|[-–—])\s*(\d{1,2}(?::\d{2})?\s*(?:AM|PM)?)/i);
+			if (!match) return null;
+			const start = timetableTimeMinutes(match[1]);
+			let end = timetableTimeMinutes(match[2]);
+			if (start === null || end === null) return null;
+			if (!/AM|PM/i.test(match[2]) && !/AM|PM/i.test(match[1]) && end <= start && end < 12 * 60) end += 12 * 60;
+			if (end <= start || start % 15 !== 0 || end % 15 !== 0) return null;
+			const format = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+			return { startTime: format(start), endTime: format(end) };
+		}
+
+		function parseTimetableLectureItems(items, previousLayout = null) {
+			const textItems = items.map((item) => ({
+				text: String(item.str || ""),
+				x: Number(item.transform?.[4] || 0),
+				y: Number(item.transform?.[5] || 0),
+				width: Number(item.width || 0)
+			})).filter((item) => item.text.length > 0);
+			const headers = {};
+			for (const heading of ["Date", "Faculty", "Subject", "Time"]) {
+				const item = textItems.find((entry) => entry.text.trim().toLowerCase() === heading.toLowerCase());
+				if (item) headers[heading] = item.x + item.width / 2;
+			}
+			let layout = Object.keys(headers).length === 4
+				&& headers.Date < headers.Faculty
+				&& headers.Faculty < headers.Subject
+				&& headers.Subject < headers.Time
+				? {
+					...headers,
+					headerY: Math.max(...textItems.filter((item) =>
+						["Date", "Faculty", "Subject", "Time"].includes(item.text.trim())
+					).map((item) => item.y))
+				}
+				: previousLayout;
+			if (!layout) {
+				throw new Error("Could not identify the Date, Faculty, Subject, and Time columns in this PDF.");
+			}
+			const columnCenters = [layout.Date, layout.Faculty, layout.Subject, layout.Time];
+			const bounds = [
+				[-Infinity, (columnCenters[0] + columnCenters[1]) / 2],
+				[(columnCenters[0] + columnCenters[1]) / 2, (columnCenters[1] + columnCenters[2]) / 2],
+				[(columnCenters[1] + columnCenters[2]) / 2, (columnCenters[2] + columnCenters[3]) / 2],
+				[(columnCenters[2] + columnCenters[3]) / 2, Infinity]
+			];
+			const headerY = layout.headerY;
+			const pageLines = timetableCellLines(textItems, -Infinity, Infinity);
+			const titleLines = pageLines.filter((line) => line.y > headerY)
+				.map((line) => line.text)
+				.filter((line) => !/^(TIME\s*TABLE|Date|Faculty|Subject|Time|Test)$/i.test(line));
+			const batchMarker = titleLines.findIndex((line) => /live\s*batch/i.test(line));
+			const batchName = batchMarker >= 0
+				? [...titleLines.slice(Math.max(0, batchMarker - 1), batchMarker + 1)].join(" ").replace(/\s+/g, " ").trim()
+				: "";
+			const dateLines = timetableCellLines(textItems, bounds[0][0], bounds[0][1])
+				.filter((line) => parseTimetableDate(line.text));
+			if (dateLines.length === 0) throw new Error("No timetable dates were found. Check that the PDF contains selectable text.");
+			const orderedDates = dateLines
+				.map((line) => ({ date: parseTimetableDate(line.text), y: line.y, original: line.text }))
+				.sort((first, second) => second.y - first.y);
+			const lectures = [];
+			orderedDates.forEach((dateEntry, index) => {
+				const previous = orderedDates[index - 1];
+				const next = orderedDates[index + 1];
+				const upper = previous ? (previous.y + dateEntry.y) / 2 : (headerY + dateEntry.y) / 2;
+				const lower = next ? (dateEntry.y + next.y) / 2 : -Infinity;
+				const rowItems = textItems.filter((item) => item.y <= upper && item.y >= lower && item.y < headerY);
+				const cells = bounds.map(([minX, maxX]) => timetableCellLines(rowItems, minX, maxX));
+				const times = cells[3].flatMap((line) => {
+					const range = parseTimetableTimeRange(line.text);
+					return range ? [{ ...range, y: line.y }] : [];
+				});
+				if (times.length === 0) return;
+				const facultyLines = cells[1].filter((line) => line.text && !parseTimetableDate(line.text));
+				const subjectLines = cells[2].filter((line) => line.text);
+				times.forEach((time) => {
+					const closestLine = (lines) => lines.slice().sort((first, second) =>
+						Math.abs(first.y - time.y) - Math.abs(second.y - time.y)
+					)[0];
+					const facultyLine = closestLine(facultyLines);
+					const subjectLine = closestLine(subjectLines);
+					const faculty = facultyLine?.text || "";
+					const subject = subjectLine?.text || "";
+					if (!faculty || !subject) return;
+					lectures.push({
+						date: dateEntry.date,
+						name: faculty,
+						subject,
+						startTime: time.startTime,
+						endTime: time.endTime
+					});
+				});
+			});
+			if (lectures.length === 0) throw new Error("No complete lecture rows were found. Check the Faculty, Subject, and Time columns.");
+			return { batchName, lectures, layout };
+		}
+
+		async function loadTimetablePdfJs() {
+			if (!timetablePdfJsPromise) {
+				timetablePdfJsPromise = import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs")
+					.then((pdfjs) => {
+						pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+						return pdfjs;
+					})
+					.catch((error) => {
+						timetablePdfJsPromise = null;
+						throw new Error(`Could not load the local PDF reader: ${error.message}`);
+					});
+			}
+			return timetablePdfJsPromise;
+		}
+
+		function timetableDataFromRow(row) {
+			const value = (name) => row.querySelector(`[data-field="${name}"]`).value.trim();
+			return {
+				include: row.querySelector(".timetable-include").checked,
+				date: normalizeTimetableDate(value("date")),
+				name: value("name"),
+				subject: value("subject"),
+				startTime: value("startTime"),
+				endTime: value("endTime"),
+				studioKey: row.querySelector('[data-field="studioKey"]').value
+			};
+		}
+
+		function timetableOverlap(first, second) {
+			const firstStart = bookingTimeMinutes(first.startTime);
+			const firstEnd = bookingTimeMinutes(first.endTime);
+			const secondStart = bookingTimeMinutes(second.startTime || second.time);
+			const secondEnd = bookingTimeMinutes(second.endTime);
+			return first.date === second.date
+				&& Number.isFinite(firstStart)
+				&& Number.isFinite(firstEnd)
+				&& Number.isFinite(secondStart)
+				&& Number.isFinite(secondEnd)
+				&& firstStart < secondEnd
+				&& secondStart < firstEnd;
+		}
+
+		function timetableExactDuplicate(candidate, existing, batchNames) {
+			const booking = existing.data || existing;
+			const batches = Array.isArray(booking.batchNames)
+				? booking.batchNames
+				: typeof booking.batchName === "string" ? [booking.batchName] : [];
+			return booking.date === candidate.date
+				&& normalizeFacultyName(booking.name) === normalizeFacultyName(candidate.name)
+				&& normalizeSheetText(booking.subject) === normalizeSheetText(candidate.subject)
+				&& (booking.startTime || booking.time) === candidate.startTime
+				&& booking.endTime === candidate.endTime
+				&& batches.some((batch) => batchNames.some((candidateBatch) =>
+					normalizeSheetText(batch) === normalizeSheetText(candidateBatch)
+				));
+		}
+
+		function normalizeSheetText(value) {
+			return String(value || "").normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+		}
+
+		function refreshTimetablePreviewConflicts() {
+			const rows = [...timetablePreviewContainer.querySelectorAll("tbody tr")];
+			const batchNames = selectedTimetableBatchNames();
+			let selectedCount = 0;
+			let blockingCount = 0;
+			rows.forEach((row, index) => {
+				const candidate = timetableDataFromRow(row);
+				const warnings = [];
+				const studio = studios.find((entry) => entry.key === candidate.studioKey);
+				const exactDuplicate = timetableExistingBookings.find((entry) =>
+					timetableExactDuplicate(candidate, entry, batchNames)
+				);
+				if (candidate.include) selectedCount += 1;
+				if (!candidate.date) warnings.push("Enter a valid date as dd/mm/yyyy.");
+				if (!candidate.name || !candidate.subject || !candidate.startTime || !candidate.endTime || !studio) warnings.push("Complete the lecture details and studio.");
+				if (batchNames.length === 0) warnings.push("Select at least one Application Live batch.");
+				if (candidate.startTime && candidate.endTime) {
+					try {
+						bookingSlotKeys(candidate.startTime, candidate.endTime);
+					} catch (error) {
+						warnings.push(error.message);
+					}
+				}
+				if (exactDuplicate) {
+					const oldStudio = exactDuplicate.studio?.name || "an existing studio";
+					warnings.push(`Exact duplicate already exists in ${oldStudio}.`);
+				}
+				for (const existing of timetableExistingBookings) {
+					const current = existing.data || existing;
+					if (!timetableOverlap(candidate, current)) continue;
+					if (existing.studio?.key === candidate.studioKey) {
+						warnings.push(`${existing.studio.name} is occupied by ${current.name || "another booking"} at that time.`);
+						break;
+					}
+					if (normalizeFacultyName(current.name) === normalizeFacultyName(candidate.name)) {
+						warnings.push(`${candidate.name} already has an overlapping booking in ${existing.studio?.name || "another studio"}.`);
+						break;
+					}
+				}
+				if (candidate.include) {
+					const otherSelected = rows.filter((other, otherIndex) => otherIndex !== index
+						&& other.querySelector(".timetable-include").checked)
+						.map(timetableDataFromRow);
+					const overlap = otherSelected.find((other) => timetableOverlap(candidate, other)
+						&& (other.studioKey === candidate.studioKey
+							|| normalizeFacultyName(other.name) === normalizeFacultyName(candidate.name)));
+					if (overlap) warnings.push("This lecture conflicts with another selected lecture in this timetable.");
+				}
+				const warningElement = row.querySelector(".timetable-warning");
+				warningElement.textContent = [...new Set(warnings)].join(" ");
+				warningElement.classList.toggle("error", warnings.length > 0);
+				row.dataset.duplicate = String(Boolean(exactDuplicate));
+				row.dataset.blocking = String(candidate.include && warnings.length > 0);
+				if (candidate.include && warnings.length > 0) blockingCount += 1;
+				row.querySelector(".timetable-weekday").textContent = candidate.date
+					? new Date(`${candidate.date}T00:00:00`).toLocaleDateString("en-IN", { weekday: "long" })
+					: "";
+			});
+			timetableConfirmButton.disabled = !timetableProcessing.hidden || selectedCount === 0 || blockingCount > 0;
+			const summary = `${selectedCount} lecture${selectedCount === 1 ? "" : "s"} selected.`;
+			setTimetableStatus(blockingCount > 0
+				? `${summary} Resolve or deselect every flagged selected lecture before confirming.`
+				: selectedCount ? `${summary} Review the details before confirming.` : "Select at least one lecture to book.");
+		}
+
+		function renderTimetablePreview(lectures) {
+			const wrapper = document.createElement("table");
+			wrapper.className = "timetable-preview";
+			const head = document.createElement("thead");
+			const headRow = document.createElement("tr");
+			["Book this lecture", "Date (dd/mm/yyyy)", "Weekday", "Faculty", "Subject", "Start", "End", "Studio", "Duplicate / conflict"].forEach((label) => {
+				const cell = document.createElement("th");
+				cell.textContent = label;
+				headRow.append(cell);
+			});
+			head.append(headRow);
+			const body = document.createElement("tbody");
+			lectures.forEach((lecture, index) => {
+				const row = document.createElement("tr");
+				const includeCell = document.createElement("td");
+				const include = document.createElement("input");
+				include.type = "checkbox";
+				include.className = "timetable-include";
+				include.checked = true;
+				include.setAttribute("aria-label", `Book lecture ${index + 1}`);
+				includeCell.append(include);
+				row.append(includeCell);
+				const appendInput = (field, type, value, label) => {
+					const cell = document.createElement("td");
+					const input = document.createElement("input");
+					input.type = type;
+					input.value = value;
+					input.step = type === "time" ? "900" : "1";
+					if (type === "text") input.maxLength = field === "subject" ? 120 : 100;
+					input.dataset.field = field;
+					input.setAttribute("aria-label", `${label} for lecture ${index + 1}`);
+					cell.append(input);
+					row.append(cell);
+				};
+				appendInput("date", "text", displayTimetableDate(lecture.date), "Date (dd/mm/yyyy)");
+				const dateInput = row.querySelector('[data-field="date"]');
+				dateInput.placeholder = "dd/mm/yyyy";
+				dateInput.inputMode = "numeric";
+				dateInput.maxLength = 10;
+				const weekdayCell = document.createElement("td");
+				const weekday = document.createElement("span");
+				weekday.className = "timetable-weekday";
+				weekdayCell.append(weekday);
+				row.append(weekdayCell);
+				appendInput("name", "text", lecture.name, "Faculty");
+				appendInput("subject", "text", lecture.subject, "Subject");
+				appendInput("startTime", "time", lecture.startTime, "Start time");
+				appendInput("endTime", "time", lecture.endTime, "End time");
+				const studioCell = document.createElement("td");
+				const studioSelect = document.createElement("select");
+				studioSelect.dataset.field = "studioKey";
+				studios.forEach((studio) => studioSelect.add(new Option(studio.name, studio.key)));
+				studioSelect.value = studios.some((studio) => studio.key === "studio1") ? "studio1" : studios[0]?.key || "";
+				studioSelect.setAttribute("aria-label", `Studio for lecture ${index + 1}`);
+				studioCell.append(studioSelect);
+				row.append(studioCell);
+				const warningCell = document.createElement("td");
+				warningCell.className = "timetable-warning";
+				row.append(warningCell);
+				row.querySelectorAll("input, select").forEach((control) =>
+					control.addEventListener("input", refreshTimetablePreviewConflicts)
+				);
+				row.querySelector(".timetable-include").addEventListener("change", refreshTimetablePreviewConflicts);
+				body.append(row);
+			});
+			wrapper.append(head, body);
+			timetablePreviewContainer.replaceChildren(wrapper);
+			timetablePreviewContainer.hidden = false;
+			timetableConfirmControls.hidden = false;
+			refreshTimetablePreviewConflicts();
+			[...body.querySelectorAll("tr")].forEach((row) => {
+				if (row.dataset.duplicate === "true") row.querySelector(".timetable-include").checked = false;
+			});
+			refreshTimetablePreviewConflicts();
+		}
+
+		async function updateApplicationLiveBatchList(batchNames) {
+			const normalizedNames = [...new Set(batchNames.map((batch) => batch.trim().replace(/\s+/g, " "))
+				.filter(Boolean))];
+			if (normalizedNames.length === 0) throw new Error("Select at least one Application Live batch.");
+			const batchRef = ref(database, "applicationLiveBatches");
+			const result = await runTransaction(batchRef, (existing) => {
+				const initialized = existing?.initialized === true
+					&& existing.entries
+					&& typeof existing.entries === "object";
+				const entries = initialized
+					? { ...existing.entries }
+					: Object.fromEntries(timetableInitialBatches.map((batch) => [
+						[...batch.toLocaleLowerCase()].map((character) => character.codePointAt(0).toString(16)).join("_"),
+						batch
+					]));
+				normalizedNames.forEach((normalized) => {
+					const exists = Object.values(entries).some((value) => normalizeSheetText(value) === normalizeSheetText(normalized));
+					if (!exists) {
+						const key = [...normalized.toLocaleLowerCase()]
+							.map((character) => character.codePointAt(0).toString(16))
+							.join("_");
+						entries[key] = normalized;
+					}
+				});
+				return { initialized: true, entries };
+			});
+			const confirmed = result.snapshot.val();
+			const savedEntries = Object.values(confirmed?.entries || []).map(normalizeSheetText);
+			const missing = normalizedNames.filter((name) => !savedEntries.includes(normalizeSheetText(name)));
+			if (missing.length) {
+				throw new Error(`Could not add these batches to the Application Live batch list: ${missing.join(", ")}.`);
+			}
+		}
+
+		async function loadTimetablePdf(file) {
+			timetablePreviewContainer.hidden = true;
+			timetableConfirmControls.hidden = true;
+			timetablePreviewContainer.replaceChildren();
+			setTimetableStatus("");
+			if (!currentUser || currentRole !== "Admin") throw new Error("Only Admin can upload a timetable.");
+			if (!file || (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf")) {
+				throw new Error("Choose a PDF timetable file.");
+			}
+			await loadTimetableBatchNames();
+			let bytes = await file.arrayBuffer();
+			let pdfDocument;
+			try {
+				if (new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-") throw new Error("This file is not a valid PDF.");
+				setTimetableStatus("Reading the PDF timetable locally…");
+				const pdfjs = await loadTimetablePdfJs();
+				pdfDocument = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+				const lectures = [];
+				let detectedBatchName = "";
+				let tableLayout = null;
+				for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+					const page = await pdfDocument.getPage(pageNumber);
+					const content = await page.getTextContent();
+					const parsed = parseTimetableLectureItems(content.items, tableLayout);
+					tableLayout = parsed.layout;
+					if (!detectedBatchName && parsed.batchName) detectedBatchName = parsed.batchName;
+					lectures.push(...parsed.lectures);
+				}
+				if (lectures.length === 0) throw new Error("No lectures could be read from this PDF.");
+				if (detectedBatchName) addTimetableBatch(detectedBatchName.slice(0, 120), true);
+				const dates = lectures.map((lecture) => lecture.date).sort();
+				timetableExistingBookings = await getBookingsInRange(dates[0], dates[dates.length - 1]);
+				renderTimetablePreview(lectures);
+				setTimetableStatus(`Read ${lectures.length} lecture${lectures.length === 1 ? "" : "s"} from ${pdfDocument.numPages} page${pdfDocument.numPages === 1 ? "" : "s"}. The PDF was processed locally and is not saved. Review the preview; no bookings have been saved yet.`);
+			} finally {
+				if (pdfDocument) {
+					try {
+						await pdfDocument.destroy();
+					} catch (error) {
+						console.error("Could not release the in-memory PDF reader:", error);
+					}
+				}
+				bytes = null;
+			}
+		}
+
+		async function confirmTimetableBookings() {
+			if (!currentUser || currentRole !== "Admin") {
+				setTimetableStatus("Only Admin can confirm timetable bookings.", true);
+				return;
+			}
+			const rows = [...timetablePreviewContainer.querySelectorAll("tbody tr")];
+			const selectedRows = rows.filter((row) => row.querySelector(".timetable-include").checked
+				&& row.dataset.saved !== "true");
+			if (selectedRows.length === 0) {
+				setTimetableStatus("Select at least one unsaved lecture.", true);
+				return;
+			}
+			let savedCount = 0;
+			let completedAll = false;
+			const bookingFailures = [];
+			const sheetWarnings = [];
+			setTimetableProcessing(true, "Checking for new booking conflicts…", selectedRows.length, 0);
+			setTimetableStatus("Processing timetable bookings. Keep this page open until it finishes.");
+			await allowTimetableProcessingPaint();
+			try {
+				const selectedDates = selectedRows.map((row) => timetableDataFromRow(row).date).sort();
+				timetableExistingBookings = await getBookingsInRange(selectedDates[0], selectedDates[selectedDates.length - 1]);
+				refreshTimetablePreviewConflicts();
+				if (selectedRows.some((row) => row.dataset.blocking === "true")) {
+					throw new Error("A selected lecture has a duplicate, conflict, or invalid value. Resolve the preview flags first.");
+				}
+				const batchNames = selectedTimetableBatchNames();
+				if (batchNames.length === 0) throw new Error("Select at least one Application Live batch.");
+				setTimetableProcessing(true, "Saving selected batch names…", selectedRows.length, 0);
+				setTimetableStatus("Processing timetable bookings: saving the selected batch names.");
+				await updateApplicationLiveBatchList(batchNames);
+				for (const [index, row] of selectedRows.entries()) {
+					const values = timetableDataFromRow(row);
+					setTimetableProcessing(
+						true,
+						`Booking lecture ${index + 1} of ${selectedRows.length}: ${values.name}, ${displayTimetableDate(values.date)}…`,
+						selectedRows.length,
+						index
+					);
+					setTimetableStatus(`Processing booking ${index + 1} of ${selectedRows.length}: ${values.name}, ${displayTimetableDate(values.date)}.`);
+					const studio = studios.find((entry) => entry.key === values.studioKey);
+					if (!studio) {
+						bookingFailures.push(`${displayTimetableDate(values.date)} ${values.startTime}: selected studio no longer exists.`);
+						timetableProcessingProgress.value = index + 1;
+						continue;
+					}
+					const bookingRef = push(ref(database, `bookings/${studio.key}`));
+					const bookingId = `${studio.key}/${bookingRef.key}`;
+					const booking = {
+						name: values.name,
+						date: values.date,
+						startTime: values.startTime,
+						endTime: values.endTime,
+						time: values.startTime,
+						purpose: "Application Live",
+						batchNames,
+						batchName: batchNames.length === 1 ? batchNames[0] : null,
+						subject: values.subject,
+						userId: currentUser.uid,
+						createdAt: Date.now()
+					};
+					let reservation;
+					try {
+						reservation = await reserveBookingSlots(studio.key, booking, bookingId);
+						await set(bookingRef, booking);
+					} catch (error) {
+						if (reservation) {
+							try {
+								await releaseBookingSlots(studio.key, booking.date, reservation, bookingId);
+							} catch (cleanupError) {
+								console.error("Could not release timetable slot reservation after a failed booking:", cleanupError);
+							}
+						}
+						bookingFailures.push(`${displayTimetableDate(values.date)} ${values.startTime}: ${error.message}`);
+						timetableProcessingProgress.value = index + 1;
+						continue;
+					}
+					const sheetBooking = {
+						...booking,
+						bookingId,
+						studio: studio.name,
+						studioKey: studio.key,
+						studioOrder: studios.findIndex((entry) => entry.key === studio.key)
+					};
+					try {
+						await syncBookingsWithSheet("upsert", { booking: sheetBooking });
+					} catch (error) {
+						try {
+							queueSheetSync("upsert", { booking: sheetBooking });
+							sheetWarnings.push(`${displayTimetableDate(values.date)} ${values.startTime}: Google Sheet sync queued for retry.`);
+						} catch (queueError) {
+							sheetWarnings.push(`${displayTimetableDate(values.date)} ${values.startTime}: Google Sheet sync failed and could not be queued (${error.message}; ${queueError.message}).`);
+							console.error("Could not queue timetable Google Sheet sync:", queueError);
+						}
+					}
+					row.dataset.saved = "true";
+					row.querySelector(".timetable-include").checked = false;
+					row.querySelector(".timetable-include").disabled = true;
+					row.querySelector(".timetable-warning").textContent = "Booked.";
+					row.querySelector(".timetable-warning").classList.remove("error");
+					savedCount += 1;
+					timetableProcessingProgress.value = index + 1;
+				}
+				completedAll = savedCount === selectedRows.length;
+				if (completedAll) {
+					resetTimetablePreviewAfterCompletion();
+					const sheetMessage = sheetWarnings.length
+						? ` ${sheetWarnings.length} Google Sheet sync issue${sheetWarnings.length === 1 ? " was" : "s were"} reported; check the queued sync status.`
+						: "";
+					setTimetableStatus(
+						`All ${savedCount} selected lecture${savedCount === 1 ? "" : "s"} booked successfully. The preview and upload have been cleared.${sheetMessage}`,
+						sheetWarnings.some((message) => message.includes("could not be queued")),
+						!sheetWarnings.length
+					);
+				} else {
+					refreshTimetablePreviewConflicts();
+					const failureText = bookingFailures.length ? ` Not booked: ${bookingFailures.join(" | ")}` : "";
+					const sheetMessage = sheetWarnings.length ? ` Google Sheet: ${sheetWarnings.join(" | ")}` : "";
+					setTimetableStatus(
+						`${savedCount} of ${selectedRows.length} selected lecture${selectedRows.length === 1 ? "" : "s"} booked. Saved lectures are marked; unresolved lectures remain in the preview so you can correct or retry them.${failureText}${sheetMessage}`,
+						true
+					);
+				}
+			} catch (error) {
+				setTimetableStatus(`Could not confirm timetable bookings: ${error.message}`, true);
+				console.error("Timetable booking confirmation failed:", error);
+			} finally {
+				timetableFileInput.value = "";
+				setTimetableProcessing(false);
+			}
+		}
+
+		timetableFileInput.addEventListener("change", async () => {
+			const file = timetableFileInput.files?.[0];
+			if (!file) return;
+			try {
+				await loadTimetablePdf(file);
+			} catch (error) {
+				setTimetableStatus(`Could not read the timetable PDF: ${error.message}`, true);
+				console.error("Timetable PDF parsing failed:", error);
+			} finally {
+				timetableFileInput.value = "";
+			}
+		});
+		document.querySelector("#add-timetable-batch").addEventListener("click", () => {
+			if (!addTimetableBatch(timetableNewBatchInput.value, true)) {
+				setTimetableStatus("Enter a batch name before adding it.", true);
+				return;
+			}
+			timetableNewBatchInput.value = "";
+			timetableBatchDropdown.open = true;
+			refreshTimetablePreviewConflicts();
+		});
+		timetableNewBatchInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				document.querySelector("#add-timetable-batch").click();
+			}
+		});
+		timetableConfirmButton.addEventListener("click", confirmTimetableBookings);
+		document.querySelector("#cancel-timetable-preview").addEventListener("click", () => {
+			timetableFileInput.value = "";
+			timetablePreviewContainer.replaceChildren();
+			timetablePreviewContainer.hidden = true;
+			timetableConfirmControls.hidden = true;
+			timetableExistingBookings = [];
+			setTimetableStatus("Preview cancelled. No bookings were changed.");
+		});
+
 		function toCsvCell(value) {
 			const text = value === null || value === undefined ? "" : String(value);
 			const safeText = /^[\t\r ]*[=+\-@]/.test(text) ? `'${text}` : text;
@@ -1483,10 +2322,11 @@
 		const editPurposeSelect = document.querySelector("#edit-booking-purpose");
 		const editStartTimeSelect = document.querySelector("#edit-booking-start-time");
 		const editEndTimeSelect = document.querySelector("#edit-booking-end-time");
+		const editStudioSelect = document.querySelector("#edit-booking-studio");
 
 		function populateEditTimeOptions(select, endMinute) {
 			select.replaceChildren(new Option("Select Time", ""));
-			for (let minutes = 8 * 60; minutes <= endMinute; minutes += 30) {
+			for (let minutes = 8 * 60; minutes <= endMinute; minutes += 15) {
 				const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
 				const remainder = String(minutes % 60).padStart(2, "0");
 				const value = `${hours}:${remainder}`;
@@ -1553,8 +2393,118 @@
 
 		editPurposeSelect.addEventListener("change", updateEditBookingFields);
 
+		async function moveBookingToStudio(sourceStudio, targetStudio, booking, updatedBooking) {
+			const sourceBookingId = `${sourceStudio.key}/${booking.bookingKey}`;
+			let targetBookingKey = booking.bookingKey;
+			if ((await get(ref(database, `bookings/${targetStudio.key}/${targetBookingKey}`))).exists()) {
+				targetBookingKey = crypto.randomUUID();
+			}
+			const targetBookingId = `${targetStudio.key}/${targetBookingKey}`;
+			const sourceRef = ref(database, `bookings/${sourceStudio.key}/${booking.bookingKey}`);
+			const targetRef = ref(database, `bookings/${targetStudio.key}/${targetBookingKey}`);
+			let reservation;
+			let targetWritten = false;
+			try {
+				reservation = await reserveBookingSlots(
+					targetStudio.key,
+					updatedBooking,
+					targetBookingId,
+					"",
+					sourceBookingId
+				);
+				await set(targetRef, updatedBooking);
+				targetWritten = true;
+				await remove(sourceRef);
+			} catch (error) {
+				const rollbackErrors = [];
+				if (targetWritten) {
+					try {
+						await remove(targetRef);
+					} catch (rollbackError) {
+						rollbackErrors.push(`new booking: ${rollbackError.message}`);
+					}
+				}
+				if (reservation) {
+					try {
+						await restoreTransferredFacultySlots(updatedBooking.date, reservation, targetBookingId);
+						await releaseBookingSlots(targetStudio.key, updatedBooking.date, reservation, targetBookingId);
+					} catch (rollbackError) {
+						rollbackErrors.push(`new reservations: ${rollbackError.message}`);
+					}
+				}
+				const rollbackMessage = rollbackErrors.length
+					? ` Rollback needs attention: ${rollbackErrors.join("; ")}.`
+					: "";
+				throw new Error(`${error.message || "Firebase rejected the studio change."}${rollbackMessage}`);
+			}
+
+			let slotCleanupWarning = "";
+			try {
+				await releaseBookingSlots(sourceStudio.key, booking.date, {
+					legacy: bookingSlotKeys(booking.startTime || booking.time, booking.endTime),
+					faculty: bookingSlotKeys(booking.startTime || booking.time, booking.endTime),
+					facultyKey: facultyNameKey(booking.name)
+				}, sourceBookingId);
+			} catch (error) {
+				slotCleanupWarning = ` Old slot cleanup needs attention: ${error.message}.`;
+				console.error("Moved booking old-slot cleanup failed:", error);
+			}
+
+			const oldSheetBooking = {
+				...booking,
+				bookingId: sourceBookingId,
+				studio: sourceStudio.name,
+				studioKey: sourceStudio.key,
+				studioOrder: studios.findIndex((entry) => entry.key === sourceStudio.key)
+			};
+			const newSheetBooking = {
+				...updatedBooking,
+				bookingId: targetBookingId,
+				studio: targetStudio.name,
+				studioKey: targetStudio.key,
+				studioOrder: studios.findIndex((entry) => entry.key === targetStudio.key)
+			};
+			removePendingBookingUpserts([sourceBookingId]);
+			const sheetErrors = [];
+			try {
+				await syncBookingsWithSheet("delete", {
+					bookingId: sourceBookingId,
+					booking: oldSheetBooking
+				});
+			} catch (error) {
+				sheetErrors.push(error);
+				try {
+					queueSheetSync("delete", { bookingId: sourceBookingId, booking: oldSheetBooking });
+				} catch (queueError) {
+					console.error("Could not queue moved booking old-sheet cleanup:", queueError);
+					sheetErrors.push(queueError);
+				}
+			}
+			try {
+				await syncBookingsWithSheet("upsert", { booking: newSheetBooking });
+			} catch (error) {
+				sheetErrors.push(error);
+				try {
+					queueSheetSync("upsert", { booking: newSheetBooking });
+				} catch (queueError) {
+					console.error("Could not queue moved booking sheet upsert:", queueError);
+					sheetErrors.push(queueError);
+				}
+			}
+			const result = document.querySelector("#schedule-status");
+			if (sheetErrors.length) {
+				result.textContent = `Booking moved in Firebase. Google Sheet sync is queued or needs attention: ${sheetErrors[0].message}.${slotCleanupWarning}`;
+				result.classList.add("error");
+			} else {
+				result.textContent = `Booking moved to ${targetStudio.name} and synchronized with Google Sheet.${slotCleanupWarning}`;
+				result.classList.toggle("error", Boolean(slotCleanupWarning));
+			}
+		}
+
 		async function editBooking(studio, booking) {
 			if (currentRole !== "Admin" || !booking.bookingKey) return;
+			editStudioSelect.replaceChildren(...studios.map((entry) => new Option(entry.name, entry.key)));
+			editStudioSelect.value = studio.key;
 			document.querySelector("#edit-booking-name").value = booking.name || "";
 			document.querySelector("#edit-booking-date").value = booking.date || "";
 			const initialStartTime = normalizeBookingTime(booking.startTime || booking.time);
@@ -1589,6 +2539,7 @@
 			const startTime = String(formData.get("startTime") || "");
 			const endTime = String(formData.get("endTime") || "");
 			const purpose = String(formData.get("purpose") || "").trim();
+			const targetStudioKey = String(formData.get("studioKey") || "");
 			const subject = String(formData.get("subject") || "").trim();
 			const youtubeChannels = purpose === "YouTube Live"
 				? formData.getAll("youtubeChannels").map((channel) => String(channel).trim()).filter(Boolean)
@@ -1628,6 +2579,22 @@
 				batchName: batchNames.length === 1 ? batchNames[0] : null,
 				youtubeType: purpose.startsWith("YouTube ") ? purpose.slice("YouTube ".length) : null
 			};
+			const targetStudio = studios.find((entry) => entry.key === targetStudioKey);
+			if (!targetStudio) {
+				databaseStatus.textContent = "Booking not updated. Choose a valid studio.";
+				databaseStatus.classList.add("error");
+				return;
+			}
+			if (targetStudio.key !== studio.key) {
+				try {
+					await moveBookingToStudio(studio, targetStudio, booking, updatedBooking);
+				} catch (error) {
+					databaseStatus.textContent = `Could not move booking: ${error.message}`;
+					databaseStatus.classList.add("error");
+					console.error("Firebase booking move failed:", error);
+				}
+				return;
+			}
 			let newlyReservedSlots = { legacy: [], faculty: [], facultyKey: "" };
 			const bookingId = `${studio.key}/${booking.bookingKey}`;
 			const oldSlotKeys = bookingSlotKeys(booking.startTime || booking.time, booking.endTime);
@@ -1842,11 +2809,13 @@
 				}
 
 				currentUser = user;
-				currentRole = role; 				document.querySelector("#telegram-button").hidden = role !== "Admin";
+				currentRole = role;
 				document.querySelector("#welcome-heading").textContent = `Welcome, ${role}`;
+				document.querySelector("#telegram-button").hidden = role !== "Admin";
 				document.querySelector("#admin-tools").hidden = role !== "Admin";
 				document.querySelector("#booking-admin-tools").hidden = role !== "Admin";
 				document.querySelector("#google-sheet-tools").hidden = role !== "Admin";
+				document.querySelector("#timetable-upload-tools").hidden = role !== "Admin";
 				void flushSheetSyncQueue();
 				updateDateLabel();
 				renderStudioSections();

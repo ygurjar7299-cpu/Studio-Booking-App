@@ -778,11 +778,11 @@
 		function bookingSlotKeys(startTime, endTime) {
 			const start = bookingTimeMinutes(startTime);
 			const end = bookingTimeMinutes(endTime);
-			if (!Number.isFinite(start) || !Number.isFinite(end) || start % 30 !== 0 || end % 30 !== 0 || end <= start) {
-				throw new Error("Choose a valid time range in 30-minute increments.");
+			if (!Number.isFinite(start) || !Number.isFinite(end) || start % 15 !== 0 || end % 15 !== 0 || end <= start) {
+				throw new Error("Choose a valid time range in 15-minute increments.");
 			}
 			const keys = [];
-			for (let minute = start; minute < end; minute += 30) {
+			for (let minute = start; minute < end; minute += 15) {
 				keys.push(`${String(Math.floor(minute / 60)).padStart(2, "0")}-${String(minute % 60).padStart(2, "0")}`);
 			}
 			return keys;
@@ -796,7 +796,7 @@
 			const start = bookingTimeMinutes(booking.startTime || booking.time);
 			const end = bookingTimeMinutes(booking.endTime);
 			return Number.isFinite(start) && Number.isFinite(end)
-				&& start < slotStart + 30 && slotStart < end;
+				&& start < slotStart + 15 && slotStart < end;
 		}
 
 		async function clearStaleBookingSlot(slotRef, previous, date, slotKey, ownerStudio, ownerKey, facultyName = "") {
